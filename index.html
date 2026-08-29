@@ -696,18 +696,105 @@
     font-size:13px;
     text-decoration:underline;
   }
-</style>
+
+  /* ---------- Auth (Firebase) ---------- */
+  .auth-tabs{
+    display:flex;
+    gap:4px;
+    margin-bottom:18px;
+    border-bottom:1px solid var(--border);
+  }
+
+  .auth-tabs button{
+    background:transparent;
+    padding:8px 12px;
+    color:var(--ink-light);
+    font-size:13px;
+    font-weight:600;
+    border-bottom:2px solid transparent;
+    margin-bottom:-1px;
+  }
+
+  .auth-tabs button.active{
+    color:var(--ink);
+    border-bottom:2px solid var(--margin-red);
+  }
+
+  .auth-error{
+    background:rgba(198,72,60,0.08);
+    border:1px solid var(--accent-overdue);
+    color:var(--accent-overdue);
+    border-radius:3px;
+    padding:9px 11px;
+    font-size:13px;
+    margin:-4px 0 14px 0;
+  }
+
+  .user-badge{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12px;
+    color:var(--ink-light);
+    margin-right:10px;
+  }
+
+  .sync-status{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px;
+    color:var(--ink-light);
+  }</style>
+
+<!-- Firebase (kostenloses Google-Backend für Login + geräteübergreifende Speicherung) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/12.17.1/firebase-app-compat.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/12.17.1/firebase-auth-compat.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/12.17.1/firebase-firestore-compat.min.js"></script>
 </head>
 <body>
 
 <div id="app">
 
+  <!-- LOGIN / REGISTRIERUNG -->
+  <section id="login-screen">
+    <h1 class="brand">Heftseite</h1>
+    <p class="brand-sub">Dein Hausaufgaben-Planer</p>
+
+    <div class="login-card">
+      <div class="auth-tabs">
+        <button type="button" class="auth-tab active" data-auth="login">Einloggen</button>
+        <button type="button" class="auth-tab" data-auth="register">Registrieren</button>
+      </div>
+
+      <form id="login-form">
+        <label for="login-email">E-Mail</label>
+        <input id="login-email" type="email" autocomplete="username" required />
+        <label for="login-password">Passwort</label>
+        <input id="login-password" type="password" autocomplete="current-password" required />
+        <button type="submit" class="btn-primary">Einloggen</button>
+      </form>
+
+      <form id="register-form" hidden>
+        <label for="register-email">E-Mail</label>
+        <input id="register-email" type="email" autocomplete="username" required />
+        <label for="register-password">Passwort</label>
+        <input id="register-password" type="password" autocomplete="new-password" minlength="6" required />
+        <button type="submit" class="btn-primary">Konto erstellen</button>
+      </form>
+
+      <p id="auth-error" class="auth-error" hidden></p>
+
+      <p class="login-hint">Login läuft über Firebase (Google) — dein Passwort läuft nie über unseren eigenen Code. Einmal registriert, siehst du deine Hausaufgaben und deinen Stundenplan auf jedem Gerät, auf dem du dich mit derselben E-Mail einloggst (PC, iPad, Handy …).</p>
+    </div>
+  </section>
+
   <!-- MAIN -->
-  <section id="main-screen">
+  <section id="main-screen" hidden>
     <header class="top">
       <h1 class="brand" style="font-size:38px;">Heftseite</h1>
+      <div>
+        <span id="user-badge" class="user-badge"></span>
+        <button id="logout-btn" type="button">Ausloggen</button>
+      </div>
     </header>
-    <p class="login-hint" style="margin:-10px 0 20px 0;">Deine Daten werden direkt auf diesem Gerät in diesem Browser gespeichert — kein Login nötig. Auf einem anderen Gerät/Browser fängst du wieder bei null an.</p>
+    <p class="sync-status" id="sync-status" style="margin:-10px 0 20px 0;"></p>
 
     <nav class="tabs">
       <button class="tab-btn active" type="button" data-view="home">Home</button>
@@ -828,10 +915,30 @@
 </div>
 
 <script>
+// ============================================================
+// FIREBASE-KONFIGURATION — HIER DEINE EIGENEN WERTE EINTRAGEN
+// Bekommst du in der Firebase-Konsole unter:
+// Projekteinstellungen (Zahnrad) → "Deine Apps" → Web-App → Konfiguration
+// Diese Werte sind NICHT geheim, sie dürfen im Code stehen.
+// ============================================================
+const firebaseConfig = {
+  apiKey: "AIzaSyB0RhAgQ-5GcEY7BP6Axn-Dfmbt8TUiMUI",
+  authDomain: "heftseite.firebaseapp.com",
+  projectId: "heftseite",
+  storageBucket: "heftseite.firebasestorage.app",
+  messagingSenderId: "771919199254",
+  appId: "1:771919199254:web:4eb08ee6665865386c0937"
+};
+
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+
 (function(){
   let homework = [];
   let schedule = null;
   let editingCell = null; // { day, slot }
+  let currentUid = null;
 
   const DAYS = ['Mo','Di','Mi','Do','Fr'];
   const DAY_LABELS = { Mo:'Montag', Di:'Dienstag', Mi:'Mittwoch', Do:'Donnerstag', Fr:'Freitag' };
@@ -843,6 +950,20 @@
     'politik/sowi':'#6B7280', 'religion/ethik':'#9A7BB0', 'sport':'#E0665A', 'kunst':'#D97BB0',
     'musik':'#3EA8A0', 'informatik':'#5B6B82'
   };
+
+  const loginScreen = document.getElementById('login-screen');
+  const mainScreen = document.getElementById('main-screen');
+  const authTabs = document.querySelectorAll('.auth-tab');
+  const loginForm = document.getElementById('login-form');
+  const registerForm = document.getElementById('register-form');
+  const loginEmail = document.getElementById('login-email');
+  const loginPassword = document.getElementById('login-password');
+  const registerEmail = document.getElementById('register-email');
+  const registerPassword = document.getElementById('register-password');
+  const authError = document.getElementById('auth-error');
+  const userBadge = document.getElementById('user-badge');
+  const logoutBtn = document.getElementById('logout-btn');
+  const syncStatus = document.getElementById('sync-status');
 
   const hwForm = document.getElementById('hw-form');
   const subjectSelect = document.getElementById('subject-select');
@@ -869,6 +990,22 @@
   const cellCancel = document.getElementById('cell-cancel');
   const modalTitle = document.getElementById('modal-title');
   const nowIndicator = document.getElementById('now-indicator');
+
+  function showAuthError(msg){ authError.textContent = msg; authError.hidden = false; }
+  function clearAuthError(){ authError.hidden = true; }
+
+  function friendlyAuthError(code){
+    const map = {
+      'auth/invalid-email': 'Das ist keine gültige E-Mail-Adresse.',
+      'auth/user-not-found': 'Kein Konto mit dieser E-Mail gefunden.',
+      'auth/wrong-password': 'Falsches Passwort.',
+      'auth/invalid-credential': 'E-Mail oder Passwort ist falsch.',
+      'auth/email-already-in-use': 'Für diese E-Mail existiert schon ein Konto — einfach einloggen.',
+      'auth/weak-password': 'Das Passwort muss mindestens 6 Zeichen haben.',
+      'auth/network-request-failed': 'Keine Verbindung — bist du online?'
+    };
+    return map[code] || 'Etwas ist schiefgelaufen. Bitte nochmal versuchen.';
+  }
 
   function getColorForSubject(subject){
     const key = subject.trim().toLowerCase();
@@ -930,32 +1067,18 @@
     return div.innerHTML;
   }
 
-  // ---------- Storage (localStorage — direkt auf diesem Gerät) ----------
-  async function loadHomework(){
+  // ---------- Storage (Firestore — geräteübergreifend über den Login) ----------
+  async function loadUserData(){
+    if(syncStatus) syncStatus.textContent = 'Lade deine Daten …';
     try{
-      const raw = localStorage.getItem('homework');
-      homework = raw ? JSON.parse(raw) : [];
+      const snap = await db.collection('users').doc(currentUid).get();
+      const data = snap.exists ? snap.data() : {};
+      homework = data.homework || [];
+      schedule = data.schedule || null;
     } catch(e){
       homework = [];
-    }
-    render();
-    renderHome();
-  }
-
-  async function saveHomework(){
-    try{
-      localStorage.setItem('homework', JSON.stringify(homework));
-    } catch(e){
-      statusMsg.textContent = 'Speichern hat nicht geklappt — ist der Browser-Speicher voll oder blockiert?';
-    }
-  }
-
-  async function loadSchedule(){
-    try{
-      const raw = localStorage.getItem('schedule');
-      schedule = raw ? JSON.parse(raw) : null;
-    } catch(e){
       schedule = null;
+      if(syncStatus) syncStatus.textContent = 'Konnte nicht laden — bist du online?';
     }
     if(!schedule){
       schedule = { times: DEFAULT_TIMES.slice(), entries: {}, colors: {} };
@@ -966,15 +1089,19 @@
     if(!schedule.colors){
       schedule.colors = {};
     }
+    if(syncStatus) syncStatus.textContent = '';
+    render();
     renderSchedule();
     renderHome();
   }
 
-  async function saveSchedule(){
+  async function saveUserData(){
+    if(!currentUid) return;
     try{
-      localStorage.setItem('schedule', JSON.stringify(schedule));
+      await db.collection('users').doc(currentUid).set({ homework, schedule }, { merge: true });
+      if(syncStatus) syncStatus.textContent = '';
     } catch(e){
-      statusMsg.textContent = 'Stundenplan konnte nicht gespeichert werden.';
+      if(syncStatus) syncStatus.textContent = 'Speichern fehlgeschlagen — bist du online?';
     }
   }
 
@@ -986,19 +1113,19 @@
       done:false,
       createdAt: todayISO()
     });
-    saveHomework();
+    saveUserData();
     render();
     renderHome();
   }
 
   function toggleDone(id){
     const item = homework.find(h => h.id === id);
-    if(item){ item.done = !item.done; saveHomework(); render(); renderHome(); }
+    if(item){ item.done = !item.done; saveUserData(); render(); renderHome(); }
   }
 
   function deleteHomework(id){
     homework = homework.filter(h => h.id !== id);
-    saveHomework();
+    saveUserData();
     render();
     renderHome();
   }
@@ -1224,7 +1351,7 @@
       inp.addEventListener('change', () => {
         const idx = parseInt(inp.getAttribute('data-time-idx'), 10);
         schedule.times[idx] = inp.value;
-        saveSchedule();
+        saveUserData();
         renderSchedule();
       });
     });
@@ -1279,7 +1406,7 @@
       teacher: cellTeacher.value.trim()
     };
     schedule.colors[subject.toLowerCase()] = cellColor.value;
-    saveSchedule();
+    saveUserData();
     renderSchedule();
     closeCellModal();
   });
@@ -1288,7 +1415,7 @@
     if(!editingCell) return;
     const key = editingCell.day + '-' + editingCell.slot;
     delete schedule.entries[key];
-    saveSchedule();
+    saveUserData();
     renderSchedule();
     closeCellModal();
   });
@@ -1323,12 +1450,75 @@
     taskInput.focus();
   });
 
-  // ---------- Start ----------
-  dueDateInput.min = todayISO();
-  dueDateInput.value = todayISO();
-  loadHomework();
-  loadSchedule();
-  setInterval(() => { if(schedule){ renderSchedule(); renderHome(); } }, 60000);
+  // ---------- Auth-Tabs (Einloggen / Registrieren) ----------
+  authTabs.forEach(btn => {
+    btn.addEventListener('click', () => {
+      authTabs.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const which = btn.dataset.auth;
+      loginForm.hidden = which !== 'login';
+      registerForm.hidden = which !== 'register';
+      clearAuthError();
+    });
+  });
+
+  registerForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    clearAuthError();
+    try{
+      await auth.createUserWithEmailAndPassword(registerEmail.value.trim(), registerPassword.value);
+      // onAuthStateChanged übernimmt den Rest (Umschalten auf main-screen, Laden der Daten)
+    } catch(err){
+      showAuthError(friendlyAuthError(err.code));
+    }
+  });
+
+  loginForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    clearAuthError();
+    try{
+      await auth.signInWithEmailAndPassword(loginEmail.value.trim(), loginPassword.value);
+    } catch(err){
+      showAuthError(friendlyAuthError(err.code));
+    }
+  });
+
+  logoutBtn.addEventListener('click', () => {
+    auth.signOut();
+  });
+
+  // ---------- Auth-Status beobachten ----------
+  auth.onAuthStateChanged(async (user) => {
+    if(user){
+      currentUid = user.uid;
+      userBadge.textContent = user.email;
+      loginScreen.hidden = true;
+      mainScreen.hidden = false;
+
+      dueDateInput.min = todayISO();
+      dueDateInput.value = todayISO();
+
+      await loadUserData();
+    } else {
+      currentUid = null;
+      homework = [];
+      schedule = null;
+      mainScreen.hidden = true;
+      loginScreen.hidden = false;
+      loginEmail.value = '';
+      loginPassword.value = '';
+      registerEmail.value = '';
+      registerPassword.value = '';
+      clearAuthError();
+      tabBtns.forEach(b => b.classList.remove('active'));
+      tabBtns[0].classList.add('active');
+      viewHome.hidden = false;
+      viewHomework.hidden = true;
+      viewSchedule.hidden = true;
+    }
+  });
+
+  setInterval(() => { if(currentUid && schedule){ renderSchedule(); renderHome(); } }, 60000);
 
 })();
 </script>
