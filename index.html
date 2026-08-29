@@ -263,6 +263,18 @@
     color:var(--ink);
   }
 
+  .form-field select{
+    appearance:none;
+    -webkit-appearance:none;
+    -moz-appearance:none;
+    cursor:pointer;
+    padding-right:34px;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='%23223047' d='M4 6l4 4 4-4z'/%3E%3C/svg%3E");
+    background-repeat:no-repeat;
+    background-position:right 10px center;
+    background-size:14px;
+  }
+
   .form-field textarea{
     resize:vertical;
     min-height:44px;
@@ -272,6 +284,111 @@
   .form-field select:focus, .form-field input:focus, .form-field textarea:focus{
     outline:2px solid var(--ink);
     outline-offset:1px;
+  }
+
+  /* ---------- Eigener Kalender (ersetzt <input type="date">) ---------- */
+  .date-picker{
+    position:relative;
+  }
+
+  .date-picker-trigger{
+    width:100%;
+    text-align:left;
+    font-family:'Work Sans', sans-serif;
+    font-size:15px;
+    padding:9px 34px 9px 10px;
+    border:1px solid var(--border);
+    border-radius:3px;
+    background:var(--paper) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='none' stroke='%235B6B82' stroke-width='2' d='M7 3v3M17 3v3M4 8h16M5 6h14a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1z'/%3E%3C/svg%3E") no-repeat right 9px center;
+    background-size:17px;
+    color:var(--ink);
+    cursor:pointer;
+  }
+
+  .date-picker-trigger:focus{
+    outline:2px solid var(--ink);
+    outline-offset:1px;
+  }
+
+  .date-picker-popup{
+    position:absolute;
+    z-index:15;
+    top:calc(100% + 6px);
+    left:0;
+    width:270px;
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:4px;
+    box-shadow:4px 4px 0 rgba(34,48,71,0.1);
+    padding:14px;
+  }
+
+  .dp-header{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    margin-bottom:10px;
+  }
+
+  .dp-header span{
+    font-family:'Caveat', cursive;
+    font-weight:700;
+    font-size:20px;
+    color:var(--ink);
+    text-transform:capitalize;
+  }
+
+  .dp-nav{
+    background:transparent;
+    color:var(--ink-light);
+    font-size:18px;
+    line-height:1;
+    padding:2px 8px;
+    border-radius:3px;
+  }
+  .dp-nav:hover{ background:var(--paper); color:var(--ink); }
+
+  .dp-weekdays, .dp-grid{
+    display:grid;
+    grid-template-columns:repeat(7, 1fr);
+    gap:2px;
+  }
+
+  .dp-weekdays span{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:10px;
+    text-transform:uppercase;
+    color:var(--ink-light);
+    text-align:center;
+    padding-bottom:4px;
+  }
+
+  .dp-day{
+    background:transparent;
+    color:var(--ink);
+    font-family:'Work Sans', sans-serif;
+    font-size:13px;
+    padding:6px 0;
+    border-radius:50%;
+    text-align:center;
+  }
+
+  .dp-day:hover:not(:disabled){ background:var(--paper); }
+
+  .dp-day:disabled{
+    color:#C7D0DC;
+    cursor:default;
+  }
+
+  .dp-day.dp-empty{ visibility:hidden; }
+
+  .dp-day.dp-today{
+    border:1px solid var(--margin-red);
+  }
+
+  .dp-day.dp-selected{
+    background:var(--ink);
+    color:var(--paper);
   }
 
   .add-card .submit-row{
@@ -845,9 +962,23 @@
               <label for="custom-subject-input">Eigenes Fach</label>
               <input id="custom-subject-input" type="text" placeholder="Fachname" />
             </div>
-            <div class="form-field" style="flex:0 0 160px;">
-              <label for="due-date-input">Fällig am</label>
-              <input id="due-date-input" type="date" required />
+            <div class="form-field" style="flex:0 0 170px;">
+              <label for="date-picker-trigger">Fällig am</label>
+              <div class="date-picker" id="date-picker">
+                <button type="button" class="date-picker-trigger" id="date-picker-trigger">Datum wählen</button>
+                <div class="date-picker-popup" id="date-picker-popup" hidden>
+                  <div class="dp-header">
+                    <button type="button" class="dp-nav" id="dp-prev" aria-label="Vorheriger Monat">‹</button>
+                    <span id="dp-month-label"></span>
+                    <button type="button" class="dp-nav" id="dp-next" aria-label="Nächster Monat">›</button>
+                  </div>
+                  <div class="dp-weekdays">
+                    <span>Mo</span><span>Di</span><span>Mi</span><span>Do</span><span>Fr</span><span>Sa</span><span>So</span>
+                  </div>
+                  <div class="dp-grid" id="dp-grid"></div>
+                </div>
+              </div>
+              <input id="due-date-input" type="date" required style="display:none;" />
             </div>
           </div>
           <div class="form-row">
@@ -993,6 +1124,15 @@ const db = firebase.firestore();
   const cellCancel = document.getElementById('cell-cancel');
   const modalTitle = document.getElementById('modal-title');
   const nowIndicator = document.getElementById('now-indicator');
+  const datePicker = document.getElementById('date-picker');
+  const datePickerTrigger = document.getElementById('date-picker-trigger');
+  const datePickerPopup = document.getElementById('date-picker-popup');
+  const dpPrev = document.getElementById('dp-prev');
+  const dpNext = document.getElementById('dp-next');
+  const dpMonthLabel = document.getElementById('dp-month-label');
+  const dpGrid = document.getElementById('dp-grid');
+  const MONTH_LABELS = ['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
+  let dpViewYear = null, dpViewMonth = null;
 
   function showAuthError(msg){ authError.textContent = msg; authError.hidden = false; }
   function clearAuthError(){ authError.hidden = true; }
@@ -1069,6 +1209,93 @@ const db = firebase.firestore();
     div.textContent = str;
     return div.innerHTML;
   }
+
+  // ---------- Eigener Kalender (ersetzt <input type="date">) ----------
+  function isoToLocalDate(iso){
+    const [y, m, d] = iso.split('-').map(Number);
+    return new Date(y, m - 1, d);
+  }
+
+  function localDateToIso(d){
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  }
+
+  function formatDisplayDate(iso){
+    return isoToLocalDate(iso).toLocaleDateString('de-DE', { weekday:'short', day:'2-digit', month:'2-digit', year:'numeric' });
+  }
+
+  function setDueDate(iso){
+    dueDateInput.value = iso;
+    datePickerTrigger.textContent = formatDisplayDate(iso);
+  }
+
+  function renderCalendar(){
+    dpMonthLabel.textContent = MONTH_LABELS[dpViewMonth] + ' ' + dpViewYear;
+
+    const firstOfMonth = new Date(dpViewYear, dpViewMonth, 1);
+    let startOffset = firstOfMonth.getDay() - 1; // Montag = 0
+    if(startOffset < 0) startOffset = 6;
+
+    const daysInMonth = new Date(dpViewYear, dpViewMonth + 1, 0).getDate();
+    const todayIso = todayISO();
+    const selectedIso = dueDateInput.value || '';
+
+    let html = '';
+    for(let i = 0; i < startOffset; i++){
+      html += `<span class="dp-day dp-empty"></span>`;
+    }
+    for(let day = 1; day <= daysInMonth; day++){
+      const iso = localDateToIso(new Date(dpViewYear, dpViewMonth, day));
+      const isPast = iso < todayIso;
+      const classes = ['dp-day'];
+      if(iso === todayIso) classes.push('dp-today');
+      if(iso === selectedIso) classes.push('dp-selected');
+      html += `<button type="button" class="${classes.join(' ')}" data-iso="${iso}" ${isPast ? 'disabled' : ''}>${day}</button>`;
+    }
+    dpGrid.innerHTML = html;
+
+    dpGrid.querySelectorAll('.dp-day:not(.dp-empty):not(:disabled)').forEach(btn => {
+      btn.addEventListener('click', () => {
+        setDueDate(btn.getAttribute('data-iso'));
+        closeDatePicker();
+      });
+    });
+  }
+
+  function openDatePicker(){
+    const base = dueDateInput.value ? isoToLocalDate(dueDateInput.value) : new Date();
+    dpViewYear = base.getFullYear();
+    dpViewMonth = base.getMonth();
+    renderCalendar();
+    datePickerPopup.hidden = false;
+  }
+
+  function closeDatePicker(){
+    datePickerPopup.hidden = true;
+  }
+
+  datePickerTrigger.addEventListener('click', () => {
+    if(datePickerPopup.hidden){ openDatePicker(); } else { closeDatePicker(); }
+  });
+
+  dpPrev.addEventListener('click', () => {
+    dpViewMonth--;
+    if(dpViewMonth < 0){ dpViewMonth = 11; dpViewYear--; }
+    renderCalendar();
+  });
+
+  dpNext.addEventListener('click', () => {
+    dpViewMonth++;
+    if(dpViewMonth > 11){ dpViewMonth = 0; dpViewYear++; }
+    renderCalendar();
+  });
+
+  document.addEventListener('click', (e) => {
+    if(!datePicker.contains(e.target)) closeDatePicker();
+  });
 
   // ---------- Storage (Firestore — geräteübergreifend über den Login) ----------
   async function loadUserData(){
@@ -1186,15 +1413,16 @@ const db = firebase.firestore();
 
   function renderItem(h){
     const urg = urgencyInfo(h.dueDate);
+    const color = getColorForSubject(h.subject);
     const stampHtml = h.done
       ? `<div class="stamp" style="color:var(--accent-green);">✓ erledigt</div>`
       : `<div class="stamp ${urg.cls}">${urg.label}</div>`;
     return `
-      <div class="hw-item ${h.done ? 'done' : ''}">
+      <div class="hw-item ${h.done ? 'done' : ''}" style="border-left:4px solid ${color};">
         <button class="hw-check" data-check="${h.id}" aria-label="Als erledigt markieren">${h.done ? '✓' : ''}</button>
         <div class="hw-body">
           <div class="hw-top-row">
-            <span class="subject-tag">${escapeHtml(h.subject)}</span>
+            <span class="subject-tag" style="border-color:${color}; color:${color}; background:color-mix(in srgb, ${color} 12%, var(--paper));">${escapeHtml(h.subject)}</span>
           </div>
           <div class="hw-task">${escapeHtml(h.task)}</div>
           ${h.note ? `<div class="hw-note">${escapeHtml(h.note)}</div>` : ''}
@@ -1449,7 +1677,7 @@ const db = firebase.firestore();
     customSubjectInput.value = '';
     subjectSelect.value = 'Deutsch';
     customSubjectField.style.display = 'none';
-    dueDateInput.value = todayISO();
+    setDueDate(todayISO());
     taskInput.focus();
   });
 
@@ -1498,8 +1726,7 @@ const db = firebase.firestore();
       loginScreen.hidden = true;
       mainScreen.hidden = false;
 
-      dueDateInput.min = todayISO();
-      dueDateInput.value = todayISO();
+      setDueDate(todayISO());
 
       await loadUserData();
     } else {
