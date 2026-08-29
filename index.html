@@ -1,0 +1,1336 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Heftseite — Hausaufgaben-Planer</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Caveat:wght@500;600;700&family=Work+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
+
+  :root{
+    --paper: #FBFAF6;
+    --grid-line: rgba(140,168,205,0.35);
+    --margin-red: #C6483C;
+    --ink: #223047;
+    --ink-light: #5B6B82;
+    --highlight: #F5C94B;
+    --accent-green: #4B8A6F;
+    --accent-overdue: #C6483C;
+    --surface: #FFFFFF;
+    --border: #DEE4EC;
+  }
+
+  * { box-sizing: border-box; }
+
+  body{
+    margin:0;
+    font-family:'Work Sans', sans-serif;
+    color:var(--ink);
+    background:
+      repeating-linear-gradient(var(--grid-line) 0 1px, transparent 1px 28px),
+      repeating-linear-gradient(90deg, var(--grid-line) 0 1px, transparent 1px 28px),
+      var(--paper);
+    min-height:100vh;
+    position:relative;
+  }
+
+  body::before{
+    content:"";
+    position:fixed;
+    top:0; bottom:0; left:56px;
+    width:2px;
+    background:var(--margin-red);
+    opacity:0.55;
+    z-index:0;
+  }
+
+  @media (max-width:640px){
+    body::before{ left:28px; }
+  }
+
+  h1,h2,h3, .stamp, .brand{
+    font-family:'Caveat', cursive;
+    font-weight:700;
+  }
+
+  #app{
+    position:relative;
+    z-index:1;
+    max-width:760px;
+    margin:0 auto;
+    padding: 32px 24px 80px 88px;
+  }
+
+  @media (max-width:640px){
+    #app{ padding: 24px 16px 60px 48px; }
+  }
+
+  /* ---------- Login ---------- */
+  #login-screen{
+    min-height:80vh;
+    display:flex;
+    flex-direction:column;
+    align-items:flex-start;
+    justify-content:center;
+  }
+
+  .brand{
+    font-size:56px;
+    line-height:1;
+    color:var(--ink);
+    margin:0 0 4px 0;
+    transform:rotate(-1deg);
+  }
+
+  .brand-sub{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:13px;
+    letter-spacing:0.08em;
+    text-transform:uppercase;
+    color:var(--ink-light);
+    margin:0 0 36px 0;
+  }
+
+  .login-card{
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:4px;
+    padding:28px;
+    box-shadow: 3px 3px 0 rgba(34,48,71,0.06);
+    width:100%;
+    max-width:380px;
+  }
+
+  .login-card label{
+    display:block;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12px;
+    text-transform:uppercase;
+    letter-spacing:0.06em;
+    color:var(--ink-light);
+    margin-bottom:8px;
+  }
+
+  .login-card input{
+    width:100%;
+    font-family:'Work Sans', sans-serif;
+    font-size:17px;
+    padding:11px 12px;
+    border:1px solid var(--border);
+    border-radius:3px;
+    background:var(--paper);
+    color:var(--ink);
+    margin-bottom:16px;
+  }
+
+  .login-card input:focus{
+    outline:2px solid var(--ink);
+    outline-offset:1px;
+  }
+
+  .login-hint{
+    font-size:13px;
+    color:var(--ink-light);
+    margin-top:14px;
+    line-height:1.5;
+  }
+
+  button{
+    font-family:'Work Sans', sans-serif;
+    font-weight:600;
+    font-size:15px;
+    cursor:pointer;
+    border:none;
+    border-radius:3px;
+  }
+
+  .btn-primary{
+    background:var(--ink);
+    color:var(--paper);
+    padding:12px 20px;
+    width:100%;
+  }
+
+  .btn-primary:hover{ background:#1a2436; }
+
+  /* ---------- Header / Nav ---------- */
+  header.top{
+    display:flex;
+    justify-content:space-between;
+    align-items:baseline;
+    margin-bottom:6px;
+    flex-wrap:wrap;
+    gap:8px;
+  }
+
+  header.top h1{
+    font-size:38px;
+    margin:0;
+    transform:rotate(-1deg);
+  }
+
+  #logout-btn{
+    background:transparent;
+    color:var(--ink-light);
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12px;
+    text-decoration:underline;
+    padding:4px;
+  }
+
+  nav.tabs{
+    display:flex;
+    gap:6px;
+    margin: 18px 0 28px 0;
+    flex-wrap:wrap;
+    border-bottom:1px solid var(--border);
+    padding-bottom:0;
+  }
+
+  nav.tabs button{
+    background:transparent;
+    padding:9px 14px 11px 14px;
+    color:var(--ink-light);
+    font-size:14px;
+    border-bottom:2px solid transparent;
+    margin-bottom:-1px;
+  }
+
+  nav.tabs button.active{
+    color:var(--ink);
+    border-bottom:2px solid var(--margin-red);
+  }
+
+  nav.tabs button.disabled{
+    color:#B7C0CD;
+    cursor:default;
+  }
+
+  nav.tabs .soon{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:9px;
+    vertical-align:super;
+  }
+
+  /* ---------- Add form ---------- */
+  .add-card{
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:4px;
+    padding:20px;
+    margin-bottom:32px;
+    box-shadow: 3px 3px 0 rgba(34,48,71,0.05);
+  }
+
+  .add-card h2{
+    font-size:24px;
+    margin:0 0 14px 0;
+  }
+
+  .form-row{
+    display:flex;
+    gap:12px;
+    margin-bottom:12px;
+    flex-wrap:wrap;
+  }
+
+  .form-field{
+    flex:1 1 160px;
+    display:flex;
+    flex-direction:column;
+  }
+
+  .form-field label{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px;
+    text-transform:uppercase;
+    letter-spacing:0.05em;
+    color:var(--ink-light);
+    margin-bottom:6px;
+  }
+
+  .form-field select, .form-field input, .form-field textarea{
+    font-family:'Work Sans', sans-serif;
+    font-size:15px;
+    padding:9px 10px;
+    border:1px solid var(--border);
+    border-radius:3px;
+    background:var(--paper);
+    color:var(--ink);
+  }
+
+  .form-field textarea{
+    resize:vertical;
+    min-height:44px;
+    font-family:'Work Sans', sans-serif;
+  }
+
+  .form-field select:focus, .form-field input:focus, .form-field textarea:focus{
+    outline:2px solid var(--ink);
+    outline-offset:1px;
+  }
+
+  .add-card .submit-row{
+    display:flex;
+    justify-content:flex-end;
+    margin-top:6px;
+  }
+
+  .add-card .submit-row button{
+    background:var(--margin-red);
+    color:#fff;
+    padding:10px 22px;
+  }
+  .add-card .submit-row button:hover{ background:#a63b30; }
+
+  /* ---------- List ---------- */
+  .group{ margin-bottom:28px; }
+
+  .group-title{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12px;
+    text-transform:uppercase;
+    letter-spacing:0.08em;
+    color:var(--ink-light);
+    margin:0 0 10px 0;
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+
+  .group-title .count{
+    background:var(--border);
+    color:var(--ink);
+    border-radius:10px;
+    padding:1px 8px;
+    font-size:11px;
+  }
+
+  .hw-item{
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:4px;
+    padding:14px 14px 14px 12px;
+    margin-bottom:10px;
+    display:flex;
+    align-items:flex-start;
+    gap:12px;
+    transition: opacity 0.15s ease;
+  }
+
+  .hw-item.done{ opacity:0.55; }
+
+  .hw-check{
+    width:22px; height:22px;
+    border:2px solid var(--ink-light);
+    border-radius:50%;
+    flex:0 0 auto;
+    margin-top:2px;
+    cursor:pointer;
+    background:transparent;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:13px;
+    color:var(--accent-green);
+    padding:0;
+  }
+
+  .hw-item.done .hw-check{
+    border-color:var(--accent-green);
+    background:var(--accent-green);
+    color:#fff;
+  }
+
+  .hw-body{ flex:1 1 auto; min-width:0; }
+
+  .hw-top-row{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    flex-wrap:wrap;
+    margin-bottom:4px;
+  }
+
+  .subject-tag{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px;
+    text-transform:uppercase;
+    letter-spacing:0.04em;
+    background:var(--paper);
+    border:1px solid var(--border);
+    border-radius:3px;
+    padding:2px 7px;
+    color:var(--ink);
+  }
+
+  .hw-task{
+    font-size:16px;
+    color:var(--ink);
+    margin:2px 0 2px 0;
+    word-break:break-word;
+  }
+
+  .hw-item.done .hw-task{ text-decoration:line-through; }
+
+  .hw-note{
+    font-size:13px;
+    color:var(--ink-light);
+    margin-top:2px;
+  }
+
+  .hw-due{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12px;
+    color:var(--ink-light);
+    margin-top:4px;
+  }
+
+  .stamp{
+    font-size:15px;
+    line-height:1;
+    padding:5px 10px 6px 10px;
+    border-radius:50%/40%;
+    border:2px solid currentColor;
+    transform:rotate(-6deg);
+    white-space:nowrap;
+    flex:0 0 auto;
+  }
+
+  .stamp.overdue{ color:var(--accent-overdue); }
+  .stamp.today{ color:var(--accent-overdue); }
+  .stamp.tomorrow{ color:#B9862E; }
+  .stamp.week{ color:var(--ink-light); border-style:dashed; }
+  .stamp.later{ color:var(--ink-light); border-style:dashed; opacity:0.7; }
+
+  .del-btn{
+    background:transparent;
+    color:var(--ink-light);
+    font-size:18px;
+    line-height:1;
+    padding:2px 6px;
+    flex:0 0 auto;
+  }
+  .del-btn:hover{ color:var(--accent-overdue); }
+
+  .empty-state{
+    text-align:center;
+    padding:50px 20px;
+    color:var(--ink-light);
+  }
+  .empty-state .big{
+    font-family:'Caveat', cursive;
+    font-size:30px;
+    color:var(--ink);
+    margin-bottom:6px;
+  }
+
+  .status-msg{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12px;
+    color:var(--ink-light);
+    margin-bottom:16px;
+  }
+
+  .visually-hidden{
+    position:absolute; width:1px; height:1px;
+    overflow:hidden; clip:rect(0,0,0,0);
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    *{ transition:none !important; }
+  }
+
+  /* ---------- Untis info box ---------- */
+  .info-box{
+    background:var(--surface);
+    border:1px dashed var(--border);
+    border-radius:4px;
+    padding:14px 16px;
+    margin-bottom:24px;
+    font-size:13px;
+    color:var(--ink-light);
+    line-height:1.55;
+  }
+  .info-box strong{ color:var(--ink); }
+
+  /* ---------- Schedule table ---------- */
+  .schedule-wrap{
+    overflow-x:auto;
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:4px;
+    padding:12px;
+    box-shadow: 3px 3px 0 rgba(34,48,71,0.05);
+  }
+
+  table.schedule{
+    border-collapse:collapse;
+    width:100%;
+    min-width:640px;
+  }
+
+  table.schedule th, table.schedule td{
+    border:1px solid var(--border);
+    vertical-align:top;
+  }
+
+  table.schedule thead th{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px;
+    text-transform:uppercase;
+    letter-spacing:0.05em;
+    color:var(--ink-light);
+    padding:8px 6px;
+    background:var(--paper);
+  }
+
+  .slot-header{
+    width:92px;
+    padding:6px 8px;
+    text-align:left;
+  }
+
+  .slot-label{
+    font-family:'Caveat', cursive;
+    font-size:20px;
+    color:var(--ink);
+    display:block;
+  }
+
+  .slot-time{
+    width:100%;
+    border:none;
+    background:transparent;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px;
+    color:var(--ink-light);
+    padding:1px 0;
+  }
+  .slot-time:focus{ outline:1px solid var(--border); }
+
+  .cell-btn{
+    width:100%;
+    min-height:52px;
+    background:transparent;
+    text-align:left;
+    padding:6px 8px;
+    color:var(--ink-light);
+    font-size:13px;
+  }
+
+  .cell-btn:hover{ background:var(--paper); }
+
+  .cell-filled{
+    display:flex;
+    flex-direction:column;
+    gap:2px;
+  }
+
+  .cell-subject{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12px;
+    font-weight:500;
+    text-transform:uppercase;
+    letter-spacing:0.03em;
+    color:var(--ink);
+  }
+
+  .cell-meta{
+    font-size:11px;
+    color:var(--ink-light);
+  }
+
+  .cell-empty-plus{
+    font-size:16px;
+    color:#C7D0DC;
+  }
+
+  .now-indicator{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12px;
+    color:var(--ink-light);
+    margin-bottom:10px;
+  }
+
+  .now-indicator strong{ color:var(--margin-red); }
+
+  table.schedule thead th.today-col{
+    color:var(--margin-red);
+    font-weight:600;
+  }
+
+  tr.current-row td{
+    box-shadow: inset 0 3px 0 0 var(--margin-red);
+    position:relative;
+  }
+
+  td.cell-today{
+    background:rgba(198,72,60,0.045);
+  }
+
+  td.cell-past .cell-btn{
+    opacity:0.4;
+    filter:grayscale(65%);
+  }
+
+  /* ---------- Home ---------- */
+  .home-section{ margin-bottom:28px; }
+
+  .home-lesson-card{
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:4px;
+    padding:16px 18px;
+    box-shadow: 3px 3px 0 rgba(34,48,71,0.05);
+  }
+
+  .home-lesson-label{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px;
+    text-transform:uppercase;
+    letter-spacing:0.06em;
+    color:var(--ink-light);
+    margin-bottom:4px;
+  }
+
+  .home-lesson-subject{
+    font-family:'Caveat', cursive;
+    font-weight:700;
+    font-size:30px;
+    line-height:1;
+  }
+
+  .home-lesson-meta{
+    font-size:13px;
+    color:var(--ink-light);
+    margin-top:6px;
+  }
+
+  .home-lesson-empty{
+    background:var(--surface);
+    border:1px dashed var(--border);
+    border-radius:4px;
+    padding:16px 18px;
+    color:var(--ink-light);
+    font-size:14px;
+  }
+
+  .home-badges{
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+    margin:8px 0 14px 0;
+  }
+
+  .home-badge{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px;
+    text-transform:uppercase;
+    letter-spacing:0.04em;
+    padding:4px 10px;
+    border-radius:12px;
+    border:1px solid var(--border);
+    color:var(--ink-light);
+  }
+
+  .home-badge.overdue{ color:#fff; background:var(--accent-overdue); border-color:var(--accent-overdue); }
+  .home-badge.today{ color:#fff; background:#B9862E; border-color:#B9862E; }
+  .home-badge.tomorrow{ color:var(--ink); background:var(--highlight); border-color:var(--highlight); }
+  .home-badge.ok{ color:var(--accent-green); border-color:var(--accent-green); }
+
+  /* ---------- Modal ---------- */
+  .modal-overlay{
+    position:fixed;
+    inset:0;
+    background:rgba(34,48,71,0.35);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    z-index:20;
+    padding:16px;
+  }
+
+  .modal-overlay[hidden]{
+    display:none;
+  }
+
+  .modal-card{
+    background:var(--surface);
+    border-radius:4px;
+    padding:24px;
+    width:100%;
+    max-width:340px;
+    box-shadow: 4px 4px 0 rgba(34,48,71,0.12);
+  }
+
+  .modal-card h3{
+    font-size:24px;
+    margin:0 0 14px 0;
+  }
+
+  .modal-actions{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-top:16px;
+  }
+
+  .modal-actions .right{
+    display:flex;
+    gap:8px;
+  }
+
+  .btn-secondary{
+    background:transparent;
+    color:var(--ink-light);
+    padding:10px 14px;
+    border:1px solid var(--border);
+  }
+  .btn-secondary:hover{ background:var(--paper); }
+
+  .btn-danger{
+    background:transparent;
+    color:var(--accent-overdue);
+    padding:10px 6px;
+    font-size:13px;
+    text-decoration:underline;
+  }
+</style>
+</head>
+<body>
+
+<div id="app">
+
+  <!-- MAIN -->
+  <section id="main-screen">
+    <header class="top">
+      <h1 class="brand" style="font-size:38px;">Heftseite</h1>
+    </header>
+    <p class="login-hint" style="margin:-10px 0 20px 0;">Deine Daten werden direkt auf diesem Gerät in diesem Browser gespeichert — kein Login nötig. Auf einem anderen Gerät/Browser fängst du wieder bei null an.</p>
+
+    <nav class="tabs">
+      <button class="tab-btn active" type="button" data-view="home">Home</button>
+      <button class="tab-btn" type="button" data-view="homework">Hausaufgaben</button>
+      <button class="tab-btn" type="button" data-view="schedule">Stundenplan</button>
+      <button class="disabled" type="button" disabled>Arbeitsplan <span class="soon">bald</span></button>
+    </nav>
+
+    <!-- HOME -->
+    <div id="view-home">
+      <div id="home-content"></div>
+    </div>
+
+    <!-- HAUSAUFGABEN -->
+    <div id="view-homework" hidden>
+      <div class="add-card">
+        <h2>Neue Hausaufgabe</h2>
+        <form id="hw-form">
+          <div class="form-row">
+            <div class="form-field" style="flex:0 0 170px;">
+              <label for="subject-select">Fach</label>
+              <select id="subject-select">
+                <option>Deutsch</option>
+                <option>Mathe</option>
+                <option>Englisch</option>
+                <option>Französisch</option>
+                <option>Spanisch</option>
+                <option>Latein</option>
+                <option>Biologie</option>
+                <option>Chemie</option>
+                <option>Physik</option>
+                <option>Geschichte</option>
+                <option>Erdkunde</option>
+                <option>Politik/SoWi</option>
+                <option>Religion/Ethik</option>
+                <option>Sport</option>
+                <option>Kunst</option>
+                <option>Musik</option>
+                <option>Informatik</option>
+                <option value="__custom">Sonstiges …</option>
+              </select>
+            </div>
+            <div class="form-field" id="custom-subject-field" style="display:none; flex:0 0 170px;">
+              <label for="custom-subject-input">Eigenes Fach</label>
+              <input id="custom-subject-input" type="text" placeholder="Fachname" />
+            </div>
+            <div class="form-field" style="flex:0 0 160px;">
+              <label for="due-date-input">Fällig am</label>
+              <input id="due-date-input" type="date" required />
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-field">
+              <label for="task-input">Aufgabe</label>
+              <textarea id="task-input" placeholder="z. B. S. 42, Nr. 3–5 rechnen" required></textarea>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-field">
+              <label for="note-input">Notiz (optional)</label>
+              <input id="note-input" type="text" placeholder="z. B. Taschenrechner mitbringen" />
+            </div>
+          </div>
+          <div class="submit-row">
+            <button type="submit">Eintragen</button>
+          </div>
+        </form>
+      </div>
+
+      <div id="status-msg" class="status-msg" aria-live="polite"></div>
+      <div id="hw-list"></div>
+    </div>
+
+    <!-- STUNDENPLAN -->
+    <div id="view-schedule" hidden>
+      <div class="info-box">
+        <strong>Hinweis zu Untis:</strong> Eine automatische Verknüpfung mit WebUntis ist in dieser Version nicht möglich — WebUntis blockiert das direkte Abrufen deines Stundenplans aus dem Browser einer fremden Seite (CORS-Sperre). Trag deinen Stundenplan hier einmal von Hand ein, oder frag mich nach einer Alternative — Details dazu unten im Chat.
+      </div>
+      <div id="now-indicator" class="now-indicator"></div>
+      <div class="schedule-wrap">
+        <table class="schedule" id="schedule-table"></table>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- Cell edit modal -->
+  <div id="cell-modal" class="modal-overlay" hidden>
+    <div class="modal-card">
+      <h3 id="modal-title">Stunde eintragen</h3>
+      <form id="cell-form">
+        <div class="form-field" style="margin-bottom:12px;">
+          <label for="cell-subject">Fach</label>
+          <input id="cell-subject" type="text" placeholder="z. B. Mathe" required />
+        </div>
+        <div class="form-field" style="margin-bottom:12px;">
+          <label for="cell-color">Farbe für dieses Fach</label>
+          <input id="cell-color" type="color" value="#8899AC" style="height:40px; padding:2px; cursor:pointer;" />
+        </div>
+        <div class="form-field" style="margin-bottom:12px;">
+          <label for="cell-room">Raum (optional)</label>
+          <input id="cell-room" type="text" placeholder="z. B. R204" />
+        </div>
+        <div class="form-field" style="margin-bottom:4px;">
+          <label for="cell-teacher">Lehrkraft (optional)</label>
+          <input id="cell-teacher" type="text" placeholder="z. B. Frau Meyer" />
+        </div>
+        <div class="modal-actions">
+          <button type="button" id="cell-delete" class="btn-danger">Löschen</button>
+          <div class="right">
+            <button type="button" id="cell-cancel" class="btn-secondary">Abbrechen</button>
+            <button type="submit" class="btn-primary" style="width:auto;">Speichern</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  let homework = [];
+  let schedule = null;
+  let editingCell = null; // { day, slot }
+
+  const DAYS = ['Mo','Di','Mi','Do','Fr'];
+  const DAY_LABELS = { Mo:'Montag', Di:'Dienstag', Mi:'Mittwoch', Do:'Donnerstag', Fr:'Freitag' };
+  const DEFAULT_TIMES = ['08:00–08:45','08:50–09:35','09:55–10:40','10:45–11:30','11:50–12:35','12:40–13:25','13:30–14:15','14:20–15:05'];
+  const DEFAULT_SUBJECT_COLORS = {
+    'deutsch':'#C6483C', 'mathe':'#3E6FD9', 'mathematik':'#3E6FD9', 'englisch':'#4B8A6F',
+    'französisch':'#B0559A', 'spanisch':'#D97706', 'latein':'#8A7B6C', 'biologie':'#5FA052',
+    'chemie':'#D9A63E', 'physik':'#7D6FE0', 'geschichte':'#A9762E', 'erdkunde':'#3E9BA8',
+    'politik/sowi':'#6B7280', 'religion/ethik':'#9A7BB0', 'sport':'#E0665A', 'kunst':'#D97BB0',
+    'musik':'#3EA8A0', 'informatik':'#5B6B82'
+  };
+
+  const hwForm = document.getElementById('hw-form');
+  const subjectSelect = document.getElementById('subject-select');
+  const customSubjectField = document.getElementById('custom-subject-field');
+  const customSubjectInput = document.getElementById('custom-subject-input');
+  const dueDateInput = document.getElementById('due-date-input');
+  const taskInput = document.getElementById('task-input');
+  const noteInput = document.getElementById('note-input');
+  const hwList = document.getElementById('hw-list');
+  const statusMsg = document.getElementById('status-msg');
+  const tabBtns = document.querySelectorAll('.tab-btn');
+  const viewHome = document.getElementById('view-home');
+  const homeContent = document.getElementById('home-content');
+  const viewHomework = document.getElementById('view-homework');
+  const viewSchedule = document.getElementById('view-schedule');
+  const scheduleTable = document.getElementById('schedule-table');
+  const cellModal = document.getElementById('cell-modal');
+  const cellForm = document.getElementById('cell-form');
+  const cellSubject = document.getElementById('cell-subject');
+  const cellColor = document.getElementById('cell-color');
+  const cellRoom = document.getElementById('cell-room');
+  const cellTeacher = document.getElementById('cell-teacher');
+  const cellDelete = document.getElementById('cell-delete');
+  const cellCancel = document.getElementById('cell-cancel');
+  const modalTitle = document.getElementById('modal-title');
+  const nowIndicator = document.getElementById('now-indicator');
+
+  function getColorForSubject(subject){
+    const key = subject.trim().toLowerCase();
+    if(schedule && schedule.colors && schedule.colors[key]) return schedule.colors[key];
+    if(DEFAULT_SUBJECT_COLORS[key]) return DEFAULT_SUBJECT_COLORS[key];
+    return '#8899AC';
+  }
+
+  function todayDayCode(){
+    const map = { 1:'Mo', 2:'Di', 3:'Mi', 4:'Do', 5:'Fr' };
+    return map[new Date().getDay()] || null;
+  }
+
+  function nowMinutes(){
+    const d = new Date();
+    return d.getHours() * 60 + d.getMinutes();
+  }
+
+  function parseTimeRange(str){
+    if(!str) return null;
+    const clean = str.replace(/\s/g, '');
+    const parts = clean.split(/[–-]/);
+    if(parts.length < 2) return null;
+    const s = parts[0].split(':').map(Number);
+    const e = parts[1].split(':').map(Number);
+    if(s.length < 2 || e.length < 2 || s.some(isNaN) || e.some(isNaN)) return null;
+    return { start: s[0]*60 + s[1], end: e[0]*60 + e[1] };
+  }
+
+  function todayISO(){
+    const d = new Date();
+    d.setHours(0,0,0,0);
+    return d.toISOString().slice(0,10);
+  }
+
+  function daysDiff(dateStr){
+    const today = new Date(todayISO() + 'T00:00:00');
+    const due = new Date(dateStr + 'T00:00:00');
+    return Math.round((due - today) / 86400000);
+  }
+
+  function urgencyInfo(dateStr){
+    const diff = daysDiff(dateStr);
+    if (diff < 0) return { key:'overdue', label:'ÜBERFÄLLIG', cls:'overdue' };
+    if (diff === 0) return { key:'today', label:'HEUTE', cls:'today' };
+    if (diff === 1) return { key:'tomorrow', label:'MORGEN', cls:'tomorrow' };
+    if (diff <= 7) return { key:'week', label:'DIESE WOCHE', cls:'week' };
+    return { key:'later', label:'SPÄTER', cls:'later' };
+  }
+
+  function formatDate(dateStr){
+    const d = new Date(dateStr + 'T00:00:00');
+    return d.toLocaleDateString('de-DE', { weekday:'short', day:'2-digit', month:'2-digit' });
+  }
+
+  function escapeHtml(str){
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  // ---------- Storage (localStorage — direkt auf diesem Gerät) ----------
+  async function loadHomework(){
+    try{
+      const raw = localStorage.getItem('homework');
+      homework = raw ? JSON.parse(raw) : [];
+    } catch(e){
+      homework = [];
+    }
+    render();
+    renderHome();
+  }
+
+  async function saveHomework(){
+    try{
+      localStorage.setItem('homework', JSON.stringify(homework));
+    } catch(e){
+      statusMsg.textContent = 'Speichern hat nicht geklappt — ist der Browser-Speicher voll oder blockiert?';
+    }
+  }
+
+  async function loadSchedule(){
+    try{
+      const raw = localStorage.getItem('schedule');
+      schedule = raw ? JSON.parse(raw) : null;
+    } catch(e){
+      schedule = null;
+    }
+    if(!schedule){
+      schedule = { times: DEFAULT_TIMES.slice(), entries: {}, colors: {} };
+    }
+    if(!schedule.times || schedule.times.length < 1){
+      schedule.times = DEFAULT_TIMES.slice();
+    }
+    if(!schedule.colors){
+      schedule.colors = {};
+    }
+    renderSchedule();
+    renderHome();
+  }
+
+  async function saveSchedule(){
+    try{
+      localStorage.setItem('schedule', JSON.stringify(schedule));
+    } catch(e){
+      statusMsg.textContent = 'Stundenplan konnte nicht gespeichert werden.';
+    }
+  }
+
+  // ---------- Actions ----------
+  function addHomework(subject, task, dueDate, note){
+    homework.push({
+      id: Date.now().toString(36) + Math.random().toString(36).slice(2,7),
+      subject, task, dueDate, note,
+      done:false,
+      createdAt: todayISO()
+    });
+    saveHomework();
+    render();
+    renderHome();
+  }
+
+  function toggleDone(id){
+    const item = homework.find(h => h.id === id);
+    if(item){ item.done = !item.done; saveHomework(); render(); renderHome(); }
+  }
+
+  function deleteHomework(id){
+    homework = homework.filter(h => h.id !== id);
+    saveHomework();
+    render();
+    renderHome();
+  }
+
+  // ---------- Render ----------
+  function render(){
+    const open = homework.filter(h => !h.done).sort((a,b) => a.dueDate.localeCompare(b.dueDate));
+    const done = homework.filter(h => h.done).sort((a,b) => b.dueDate.localeCompare(a.dueDate));
+
+    if(homework.length === 0){
+      hwList.innerHTML = `
+        <div class="empty-state">
+          <div class="big">Leere Seite!</div>
+          <div>Noch keine Hausaufgaben eingetragen. Trag oben deine erste ein.</div>
+        </div>`;
+      return;
+    }
+
+    const groups = { overdue: [], today: [], tomorrow: [], week: [], later: [] };
+    open.forEach(h => { groups[urgencyInfo(h.dueDate).key].push(h); });
+
+    const groupTitles = {
+      overdue: 'Überfällig',
+      today: 'Heute fällig',
+      tomorrow: 'Morgen fällig',
+      week: 'Diese Woche',
+      later: 'Später'
+    };
+
+    let html = '';
+    ['overdue','today','tomorrow','week','later'].forEach(key => {
+      if(groups[key].length === 0) return;
+      html += `<div class="group">
+        <div class="group-title">${groupTitles[key]} <span class="count">${groups[key].length}</span></div>
+        ${groups[key].map(h => renderItem(h)).join('')}
+      </div>`;
+    });
+
+    if(done.length){
+      html += `<div class="group">
+        <div class="group-title">Erledigt <span class="count">${done.length}</span></div>
+        ${done.map(h => renderItem(h)).join('')}
+      </div>`;
+    }
+
+    hwList.innerHTML = html;
+
+    hwList.querySelectorAll('[data-check]').forEach(el => {
+      el.addEventListener('click', () => toggleDone(el.getAttribute('data-check')));
+    });
+    hwList.querySelectorAll('[data-del]').forEach(el => {
+      el.addEventListener('click', () => deleteHomework(el.getAttribute('data-del')));
+    });
+  }
+
+  function renderItem(h){
+    const urg = urgencyInfo(h.dueDate);
+    const stampHtml = h.done
+      ? `<div class="stamp" style="color:var(--accent-green);">✓ erledigt</div>`
+      : `<div class="stamp ${urg.cls}">${urg.label}</div>`;
+    return `
+      <div class="hw-item ${h.done ? 'done' : ''}">
+        <button class="hw-check" data-check="${h.id}" aria-label="Als erledigt markieren">${h.done ? '✓' : ''}</button>
+        <div class="hw-body">
+          <div class="hw-top-row">
+            <span class="subject-tag">${escapeHtml(h.subject)}</span>
+          </div>
+          <div class="hw-task">${escapeHtml(h.task)}</div>
+          ${h.note ? `<div class="hw-note">${escapeHtml(h.note)}</div>` : ''}
+          <div class="hw-due">fällig: ${formatDate(h.dueDate)}</div>
+        </div>
+        ${stampHtml}
+        <button class="del-btn" data-del="${h.id}" aria-label="Hausaufgabe löschen">×</button>
+      </div>`;
+  }
+
+  function renderHome(){
+    if(!homeContent) return;
+
+    // --- aktuelle Stunde ---
+    const todayCode = todayDayCode();
+    const nowMin = nowMinutes();
+    let lessonHtml;
+
+    if(!todayCode){
+      lessonHtml = `<div class="home-lesson-empty">Heute ist Wochenende — keine Schule.</div>`;
+    } else if(schedule){
+      let currentEntry = null, currentTime = null;
+      for(let i = 0; i < schedule.times.length; i++){
+        const range = parseTimeRange(schedule.times[i]);
+        if(range && nowMin >= range.start && nowMin < range.end){
+          currentEntry = schedule.entries[todayCode + '-' + i];
+          currentTime = schedule.times[i];
+          break;
+        }
+      }
+      if(currentEntry){
+        const color = getColorForSubject(currentEntry.subject);
+        lessonHtml = `<div class="home-lesson-card" style="border-left:6px solid ${color};">
+          <div class="home-lesson-label">Läuft gerade · ${escapeHtml(currentTime || '')}</div>
+          <div class="home-lesson-subject" style="color:${color};">${escapeHtml(currentEntry.subject)}</div>
+          ${(currentEntry.room || currentEntry.teacher) ? `<div class="home-lesson-meta">${[currentEntry.room, currentEntry.teacher].filter(Boolean).map(escapeHtml).join(' · ')}</div>` : ''}
+        </div>`;
+      } else {
+        lessonHtml = `<div class="home-lesson-empty">Gerade keine Stunde.</div>`;
+      }
+    } else {
+      lessonHtml = `<div class="home-lesson-empty">Noch kein Stundenplan eingetragen.</div>`;
+    }
+
+    // --- anstehende Hausaufgaben ---
+    const open = homework.filter(h => !h.done);
+    const counts = { overdue:0, today:0, tomorrow:0 };
+    open.forEach(h => {
+      const k = urgencyInfo(h.dueDate).key;
+      if(counts[k] !== undefined) counts[k]++;
+    });
+
+    let badgesHtml = '<div class="home-badges">';
+    if(counts.overdue) badgesHtml += `<span class="home-badge overdue">${counts.overdue} überfällig</span>`;
+    if(counts.today) badgesHtml += `<span class="home-badge today">${counts.today} heute fällig</span>`;
+    if(counts.tomorrow) badgesHtml += `<span class="home-badge tomorrow">${counts.tomorrow} morgen fällig</span>`;
+    if(!counts.overdue && !counts.today && !counts.tomorrow) badgesHtml += `<span class="home-badge ok">Nichts Dringendes</span>`;
+    badgesHtml += '</div>';
+
+    const upcoming = open.slice().sort((a,b) => a.dueDate.localeCompare(b.dueDate)).slice(0,5);
+    let listHtml;
+    if(upcoming.length === 0){
+      listHtml = `<div class="empty-state" style="padding:24px 12px;">
+        <div class="big">Alles erledigt!</div>
+        <div>Keine offenen Hausaufgaben.</div>
+      </div>`;
+    } else {
+      listHtml = upcoming.map(h => renderItem(h)).join('');
+    }
+
+    homeContent.innerHTML = `
+      <div class="home-section">
+        <div class="group-title">Aktuelle Stunde</div>
+        ${lessonHtml}
+      </div>
+      <div class="home-section">
+        <div class="group-title">Anstehende Hausaufgaben</div>
+        ${badgesHtml}
+        ${listHtml}
+      </div>
+    `;
+
+    homeContent.querySelectorAll('[data-check]').forEach(el => {
+      el.addEventListener('click', () => toggleDone(el.getAttribute('data-check')));
+    });
+    homeContent.querySelectorAll('[data-del]').forEach(el => {
+      el.addEventListener('click', () => deleteHomework(el.getAttribute('data-del')));
+    });
+  }
+
+  function renderSchedule(){
+    const slotCount = schedule.times.length;
+    const todayCode = todayDayCode();
+    const nowMin = nowMinutes();
+
+    if(nowIndicator){
+      if(todayCode){
+        const now = new Date();
+        const timeStr = now.toLocaleTimeString('de-DE', { hour:'2-digit', minute:'2-digit' });
+        nowIndicator.innerHTML = 'Heute ist ' + DAY_LABELS[todayCode] + ' — <strong>' + timeStr + ' Uhr</strong>. Die aktuelle Stunde ist markiert, vorbei ist ausgegraut.';
+      } else {
+        nowIndicator.textContent = 'Heute ist Wochenende — kein Unterricht.';
+      }
+    }
+
+    let html = '<thead><tr><th class="slot-header"></th>';
+    DAYS.forEach(d => {
+      html += `<th class="${d === todayCode ? 'today-col' : ''}">${DAY_LABELS[d]}</th>`;
+    });
+    html += '</tr></thead><tbody>';
+
+    for(let i = 0; i < slotCount; i++){
+      const range = parseTimeRange(schedule.times[i]);
+      const isCurrent = !!(todayCode && range && nowMin >= range.start && nowMin < range.end);
+      html += `<tr class="${isCurrent ? 'current-row' : ''}">`;
+      html += `<td class="slot-header">
+          <span class="slot-label">${i+1}.</span>
+          <input class="slot-time" data-time-idx="${i}" value="${escapeHtml(schedule.times[i] || '')}" placeholder="Uhrzeit" />
+        </td>`;
+      DAYS.forEach(day => {
+        const key = day + '-' + i;
+        const entry = schedule.entries[key];
+        const isToday = day === todayCode;
+        const isPast = !!(isToday && range && nowMin >= range.end);
+        const tdClasses = [isToday ? 'cell-today' : '', isPast ? 'cell-past' : ''].filter(Boolean).join(' ');
+        if(entry){
+          const color = getColorForSubject(entry.subject);
+          html += `<td class="${tdClasses}">
+            <button type="button" class="cell-btn" data-day="${day}" data-slot="${i}" style="border-left:4px solid ${color}; background:color-mix(in srgb, ${color} 14%, white);">
+              <div class="cell-filled">
+                <span class="cell-subject" style="color:${color};">${escapeHtml(entry.subject)}</span>
+                ${entry.room ? `<span class="cell-meta">${escapeHtml(entry.room)}</span>` : ''}
+                ${entry.teacher ? `<span class="cell-meta">${escapeHtml(entry.teacher)}</span>` : ''}
+              </div>
+            </button>
+          </td>`;
+        } else {
+          html += `<td class="${tdClasses}">
+            <button type="button" class="cell-btn" data-day="${day}" data-slot="${i}">
+              <span class="cell-empty-plus">+</span>
+            </button>
+          </td>`;
+        }
+      });
+      html += '</tr>';
+    }
+    html += '</tbody>';
+    scheduleTable.innerHTML = html;
+
+    scheduleTable.querySelectorAll('.cell-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        openCellModal(btn.getAttribute('data-day'), parseInt(btn.getAttribute('data-slot'), 10));
+      });
+    });
+
+    scheduleTable.querySelectorAll('.slot-time').forEach(inp => {
+      inp.addEventListener('change', () => {
+        const idx = parseInt(inp.getAttribute('data-time-idx'), 10);
+        schedule.times[idx] = inp.value;
+        saveSchedule();
+        renderSchedule();
+      });
+    });
+  }
+
+  function openCellModal(day, slot){
+    editingCell = { day, slot };
+    const key = day + '-' + slot;
+    const entry = schedule.entries[key];
+    modalTitle.textContent = DAY_LABELS[day] + ', ' + (slot+1) + '. Stunde';
+    cellSubject.value = entry ? entry.subject : '';
+    cellColor.value = entry ? getColorForSubject(entry.subject) : '#8899AC';
+    cellRoom.value = entry ? (entry.room || '') : '';
+    cellTeacher.value = entry ? (entry.teacher || '') : '';
+    cellDelete.style.visibility = entry ? 'visible' : 'hidden';
+    cellModal.hidden = false;
+    cellSubject.focus();
+  }
+
+  function closeCellModal(){
+    cellModal.hidden = true;
+    editingCell = null;
+  }
+
+  // ---------- Events ----------
+  tabBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      tabBtns.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const view = btn.getAttribute('data-view');
+      viewHome.hidden = view !== 'home';
+      viewHomework.hidden = view !== 'homework';
+      viewSchedule.hidden = view !== 'schedule';
+    });
+  });
+
+  cellSubject.addEventListener('input', () => {
+    if(cellSubject.value.trim()){
+      cellColor.value = getColorForSubject(cellSubject.value);
+    }
+  });
+
+  cellForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    if(!editingCell) return;
+    const subject = cellSubject.value.trim();
+    if(!subject) return;
+    const key = editingCell.day + '-' + editingCell.slot;
+    schedule.entries[key] = {
+      subject,
+      room: cellRoom.value.trim(),
+      teacher: cellTeacher.value.trim()
+    };
+    schedule.colors[subject.toLowerCase()] = cellColor.value;
+    saveSchedule();
+    renderSchedule();
+    closeCellModal();
+  });
+
+  cellDelete.addEventListener('click', () => {
+    if(!editingCell) return;
+    const key = editingCell.day + '-' + editingCell.slot;
+    delete schedule.entries[key];
+    saveSchedule();
+    renderSchedule();
+    closeCellModal();
+  });
+
+  cellCancel.addEventListener('click', closeCellModal);
+  cellModal.addEventListener('click', (e) => {
+    if(e.target === cellModal) closeCellModal();
+  });
+
+  subjectSelect.addEventListener('change', () => {
+    customSubjectField.style.display = subjectSelect.value === '__custom' ? 'flex' : 'none';
+  });
+
+  hwForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const subject = subjectSelect.value === '__custom'
+      ? (customSubjectInput.value.trim() || 'Sonstiges')
+      : subjectSelect.value;
+    const task = taskInput.value.trim();
+    const dueDate = dueDateInput.value;
+    const note = noteInput.value.trim();
+    if(!task || !dueDate) return;
+
+    addHomework(subject, task, dueDate, note);
+
+    taskInput.value = '';
+    noteInput.value = '';
+    customSubjectInput.value = '';
+    subjectSelect.value = 'Deutsch';
+    customSubjectField.style.display = 'none';
+    dueDateInput.value = todayISO();
+    taskInput.focus();
+  });
+
+  // ---------- Start ----------
+  dueDateInput.min = todayISO();
+  dueDateInput.value = todayISO();
+  loadHomework();
+  loadSchedule();
+  setInterval(() => { if(schedule){ renderSchedule(); renderHome(); } }, 60000);
+
+})();
+</script>
+</body>
+</html>
