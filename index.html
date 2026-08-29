@@ -74,6 +74,10 @@
     justify-content:center;
   }
 
+  #login-screen[hidden]{
+    display:none;
+  }
+
   .brand{
     font-size:56px;
     line-height:1;
@@ -929,7 +933,6 @@ const firebaseConfig = {
   messagingSenderId: "771919199254",
   appId: "1:771919199254:web:4eb08ee6665865386c0937"
 };
-
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
