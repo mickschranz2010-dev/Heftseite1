@@ -894,6 +894,132 @@
     margin-right:10px;
   }
 
+  /* ---------- Arbeitsplan: Art-Umschalter ---------- */
+  .toggle-tabs{
+    display:flex;
+    gap:6px;
+    margin-top:2px;
+  }
+
+  .toggle-tab{
+    background:var(--paper);
+    border:1px solid var(--border);
+    color:var(--ink-light);
+    font-family:'Work Sans', sans-serif;
+    font-size:14px;
+    font-weight:600;
+    padding:8px 18px;
+    border-radius:3px;
+  }
+
+  .toggle-tab.active{
+    background:var(--ink);
+    color:var(--paper);
+    border-color:var(--ink);
+  }
+
+  /* ---------- Arbeitsplan: Übersichtskalender ---------- */
+  .calendar-card{
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:4px;
+    padding:16px;
+    margin-bottom:24px;
+    box-shadow: 3px 3px 0 rgba(34,48,71,0.05);
+  }
+
+  .cal-header{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    margin-bottom:10px;
+  }
+
+  .cal-header span{
+    font-family:'Caveat', cursive;
+    font-weight:700;
+    font-size:24px;
+    color:var(--ink);
+    text-transform:capitalize;
+  }
+
+  .cal-weekdays, .cal-grid{
+    display:grid;
+    grid-template-columns:repeat(7, 1fr);
+    gap:4px;
+  }
+
+  .cal-weekdays span{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:10px;
+    text-transform:uppercase;
+    color:var(--ink-light);
+    text-align:center;
+    padding-bottom:4px;
+  }
+
+  .cal-day{
+    aspect-ratio:1;
+    border:1px solid var(--border);
+    border-radius:3px;
+    padding:4px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:flex-start;
+    gap:3px;
+  }
+
+  .cal-day.cal-empty{
+    border:none;
+    background:transparent;
+  }
+
+  .cal-day.cal-today{
+    border-color:var(--margin-red);
+  }
+
+  .cal-day-number{
+    font-family:'Work Sans', sans-serif;
+    font-size:12px;
+    color:var(--ink-light);
+  }
+
+  .cal-day.cal-today .cal-day-number{
+    color:var(--margin-red);
+    font-weight:600;
+  }
+
+  .cal-dots{
+    display:flex;
+    flex-wrap:wrap;
+    gap:2px;
+    justify-content:center;
+  }
+
+  .cal-dot{
+    width:7px;
+    height:7px;
+    border-radius:50%;
+  }
+
+  /* ---------- Arbeitsplan: Einträge ---------- */
+  .work-type-badge{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:10px;
+    text-transform:uppercase;
+    letter-spacing:0.05em;
+    padding:2px 7px;
+    border-radius:3px;
+    border:1px solid var(--border);
+    color:var(--ink-light);
+  }
+
+  .work-type-badge.test{
+    border-color:var(--accent-overdue);
+    color:var(--accent-overdue);
+  }
+
   .sync-status{
     font-family:'IBM Plex Mono', monospace;
     font-size:11px;
@@ -957,7 +1083,7 @@
       <button class="tab-btn active" type="button" data-view="home">Home</button>
       <button class="tab-btn" type="button" data-view="homework">Hausaufgaben</button>
       <button class="tab-btn" type="button" data-view="schedule">Stundenplan</button>
-      <button class="disabled" type="button" disabled>Arbeitsplan <span class="soon">bald</span></button>
+      <button class="tab-btn" type="button" data-view="workplan">Arbeitsplan</button>
     </nav>
 
     <!-- HOME -->
@@ -1059,6 +1185,95 @@
       </div>
     </div>
 
+    <!-- ARBEITSPLAN -->
+    <div id="view-workplan" hidden>
+      <div class="add-card">
+        <h2>Neue Arbeit / Test</h2>
+        <form id="work-form">
+          <div class="form-row">
+            <div class="form-field" style="flex:0 0 100%;">
+              <label>Art</label>
+              <div class="toggle-tabs">
+                <button type="button" class="toggle-tab active" data-worktype="arbeit">Arbeit</button>
+                <button type="button" class="toggle-tab" data-worktype="test">Test</button>
+              </div>
+              <input type="hidden" id="work-type-input" value="arbeit" />
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-field" style="flex:0 0 170px;">
+              <label for="work-subject-select">Fach</label>
+              <select id="work-subject-select">
+                <option>Deutsch</option>
+                <option>Mathe</option>
+                <option>Englisch</option>
+                <option>Französisch</option>
+                <option>Spanisch</option>
+                <option>Latein</option>
+                <option>Biologie</option>
+                <option>Chemie</option>
+                <option>Physik</option>
+                <option>Geschichte</option>
+                <option>Erdkunde</option>
+                <option>Politik/SoWi</option>
+                <option>Religion/Ethik</option>
+                <option>Sport</option>
+                <option>Kunst</option>
+                <option>Musik</option>
+                <option>Informatik</option>
+                <option value="__custom">Sonstiges …</option>
+              </select>
+            </div>
+            <div class="form-field" id="work-custom-subject-field" style="display:none; flex:0 0 170px;">
+              <label for="work-custom-subject-input">Eigenes Fach</label>
+              <input id="work-custom-subject-input" type="text" placeholder="Fachname" />
+            </div>
+            <div class="form-field" style="flex:0 0 170px;">
+              <label for="work-date-picker-trigger">Datum</label>
+              <div class="date-picker" id="work-date-picker">
+                <button type="button" class="date-picker-trigger" id="work-date-picker-trigger">Datum wählen</button>
+                <div class="date-picker-popup" id="work-date-picker-popup" hidden>
+                  <div class="dp-header">
+                    <button type="button" class="dp-nav" id="wdp-prev" aria-label="Vorheriger Monat">‹</button>
+                    <span id="wdp-month-label"></span>
+                    <button type="button" class="dp-nav" id="wdp-next" aria-label="Nächster Monat">›</button>
+                  </div>
+                  <div class="dp-weekdays">
+                    <span>Mo</span><span>Di</span><span>Mi</span><span>Do</span><span>Fr</span><span>Sa</span><span>So</span>
+                  </div>
+                  <div class="dp-grid" id="wdp-grid"></div>
+                </div>
+              </div>
+              <input id="work-date-input" type="date" required style="display:none;" />
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-field">
+              <label for="work-topic-input">Thema (optional)</label>
+              <input id="work-topic-input" type="text" placeholder="z. B. Bruchrechnung, Kapitel 3" />
+            </div>
+          </div>
+          <div class="submit-row">
+            <button type="submit">Eintragen</button>
+          </div>
+        </form>
+      </div>
+
+      <div class="calendar-card">
+        <div class="cal-header">
+          <button type="button" class="dp-nav" id="wc-prev" aria-label="Vorheriger Monat">‹</button>
+          <span id="wc-month-label"></span>
+          <button type="button" class="dp-nav" id="wc-next" aria-label="Nächster Monat">›</button>
+        </div>
+        <div class="cal-weekdays">
+          <span>Mo</span><span>Di</span><span>Mi</span><span>Do</span><span>Fr</span><span>Sa</span><span>So</span>
+        </div>
+        <div class="cal-grid" id="wc-grid"></div>
+      </div>
+
+      <div id="work-list"></div>
+    </div>
+
   </section>
 
   <!-- Cell edit modal -->
@@ -1134,6 +1349,7 @@ const firebaseConfig = {
   messagingSenderId: "771919199254",
   appId: "1:771919199254:web:4eb08ee6665865386c0937"
 };
+
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
@@ -1141,8 +1357,11 @@ const db = firebase.firestore();
 (function(){
   let homework = [];
   let schedule = null;
+  let workItems = [];
   let editingCell = null; // { day, slot }
   let currentUid = null;
+  let wdpViewYear = null, wdpViewMonth = null; // Datepicker im Arbeitsplan-Formular
+  let wcViewYear = null, wcViewMonth = null;   // Übersichtskalender im Arbeitsplan
 
   const DAYS = ['Mo','Di','Mi','Do','Fr'];
   const DAY_LABELS = { Mo:'Montag', Di:'Dienstag', Mi:'Mittwoch', Do:'Donnerstag', Fr:'Freitag' };
@@ -1186,6 +1405,27 @@ const db = firebase.firestore();
   const homeContent = document.getElementById('home-content');
   const viewHomework = document.getElementById('view-homework');
   const viewSchedule = document.getElementById('view-schedule');
+  const viewWorkplan = document.getElementById('view-workplan');
+  const workForm = document.getElementById('work-form');
+  const workTypeInput = document.getElementById('work-type-input');
+  const workTypeToggle = document.querySelectorAll('.toggle-tab');
+  const workSubjectSelect = document.getElementById('work-subject-select');
+  const workCustomSubjectField = document.getElementById('work-custom-subject-field');
+  const workCustomSubjectInput = document.getElementById('work-custom-subject-input');
+  const workTopicInput = document.getElementById('work-topic-input');
+  const workDateInput = document.getElementById('work-date-input');
+  const workDatePicker = document.getElementById('work-date-picker');
+  const workDatePickerTrigger = document.getElementById('work-date-picker-trigger');
+  const workDatePickerPopup = document.getElementById('work-date-picker-popup');
+  const wdpPrev = document.getElementById('wdp-prev');
+  const wdpNext = document.getElementById('wdp-next');
+  const wdpMonthLabel = document.getElementById('wdp-month-label');
+  const wdpGrid = document.getElementById('wdp-grid');
+  const wcPrev = document.getElementById('wc-prev');
+  const wcNext = document.getElementById('wc-next');
+  const wcMonthLabel = document.getElementById('wc-month-label');
+  const wcGrid = document.getElementById('wc-grid');
+  const workList = document.getElementById('work-list');
   const scheduleTable = document.getElementById('schedule-table');
   const cellModal = document.getElementById('cell-modal');
   const cellForm = document.getElementById('cell-form');
@@ -1373,6 +1613,74 @@ const db = firebase.firestore();
     if(!datePicker.contains(e.target)) closeDatePicker();
   });
 
+  workDatePickerTrigger.addEventListener('click', () => {
+    if(workDatePickerPopup.hidden){ openWorkDatePicker(); } else { closeWorkDatePicker(); }
+  });
+
+  wdpPrev.addEventListener('click', () => {
+    wdpViewMonth--;
+    if(wdpViewMonth < 0){ wdpViewMonth = 11; wdpViewYear--; }
+    renderWorkDatePickerGrid();
+  });
+
+  wdpNext.addEventListener('click', () => {
+    wdpViewMonth++;
+    if(wdpViewMonth > 11){ wdpViewMonth = 0; wdpViewYear++; }
+    renderWorkDatePickerGrid();
+  });
+
+  document.addEventListener('click', (e) => {
+    if(!workDatePicker.contains(e.target)) closeWorkDatePicker();
+  });
+
+  wcPrev.addEventListener('click', () => {
+    wcViewMonth--;
+    if(wcViewMonth < 0){ wcViewMonth = 11; wcViewYear--; }
+    renderWorkCalendar();
+  });
+
+  wcNext.addEventListener('click', () => {
+    wcViewMonth++;
+    if(wcViewMonth > 11){ wcViewMonth = 0; wcViewYear++; }
+    renderWorkCalendar();
+  });
+
+  workTypeToggle.forEach(btn => {
+    btn.addEventListener('click', () => {
+      workTypeToggle.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      workTypeInput.value = btn.getAttribute('data-worktype');
+    });
+  });
+
+  workSubjectSelect.addEventListener('change', () => {
+    workCustomSubjectField.style.display = workSubjectSelect.value === '__custom' ? 'flex' : 'none';
+  });
+
+  workForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const subject = workSubjectSelect.value === '__custom'
+      ? (workCustomSubjectInput.value.trim() || 'Sonstiges')
+      : workSubjectSelect.value;
+    const date = workDateInput.value;
+    const topic = workTopicInput.value.trim();
+    if(!date) return;
+
+    addWorkItem(workTypeInput.value, subject, date, topic);
+    renderWorkList();
+    renderWorkCalendar();
+    renderHome();
+
+    workTopicInput.value = '';
+    workCustomSubjectInput.value = '';
+    workSubjectSelect.value = 'Deutsch';
+    workCustomSubjectField.style.display = 'none';
+    workTypeToggle.forEach(b => b.classList.remove('active'));
+    workTypeToggle[0].classList.add('active');
+    workTypeInput.value = 'arbeit';
+    setWorkDate(todayISO());
+  });
+
   // ---------- Nächste Fach-Stunde finden (für die Checkbox) ----------
   function findNextLessonDate(subjectName){
     if(!schedule || !subjectName) return null;
@@ -1438,9 +1746,11 @@ const db = firebase.firestore();
       const data = snap.exists ? snap.data() : {};
       homework = data.homework || [];
       schedule = data.schedule || null;
+      workItems = data.workItems || [];
     } catch(e){
       homework = [];
       schedule = null;
+      workItems = [];
       if(syncStatus) syncStatus.textContent = 'Konnte nicht laden — bist du online?';
     }
     if(!schedule){
@@ -1455,13 +1765,15 @@ const db = firebase.firestore();
     if(syncStatus) syncStatus.textContent = '';
     render();
     renderSchedule();
+    renderWorkList();
+    renderWorkCalendar();
     renderHome();
   }
 
   async function saveUserData(){
     if(!currentUid) return;
     try{
-      await db.collection('users').doc(currentUid).set({ homework, schedule }, { merge: true });
+      await db.collection('users').doc(currentUid).set({ homework, schedule, workItems }, { merge: true });
       if(syncStatus) syncStatus.textContent = '';
     } catch(e){
       if(syncStatus) syncStatus.textContent = 'Speichern fehlgeschlagen — bist du online?';
@@ -1566,6 +1878,163 @@ const db = firebase.firestore();
       </div>`;
   }
 
+  // ---------- Arbeitsplan: Actions ----------
+  function addWorkItem(type, subject, date, topic){
+    workItems.push({
+      id: Date.now().toString(36) + Math.random().toString(36).slice(2,7),
+      type, subject, date, topic,
+      createdAt: todayISO()
+    });
+    saveUserData();
+  }
+
+  function deleteWorkItem(id){
+    workItems = workItems.filter(w => w.id !== id);
+    saveUserData();
+  }
+
+  function renderWorkItem(w){
+    const urg = urgencyInfo(w.date);
+    const color = getColorForSubject(w.subject);
+    const typeLabel = w.type === 'test' ? 'Test' : 'Arbeit';
+    return `
+      <div class="hw-item" style="border-left:4px solid ${color};">
+        <div class="hw-body">
+          <div class="hw-top-row">
+            <span class="subject-tag" style="border-color:${color}; color:${color}; background:color-mix(in srgb, ${color} 12%, var(--paper));">${escapeHtml(w.subject)}</span>
+            <span class="work-type-badge ${w.type === 'test' ? 'test' : ''}">${typeLabel}</span>
+          </div>
+          ${w.topic ? `<div class="hw-task">${escapeHtml(w.topic)}</div>` : ''}
+          <div class="hw-due">am: ${formatDate(w.date)}</div>
+        </div>
+        <div class="stamp ${urg.cls}">${urg.label}</div>
+        <button class="del-btn" data-work-del="${w.id}" aria-label="Eintrag löschen">×</button>
+      </div>`;
+  }
+
+  function renderWorkList(){
+    if(!workList) return;
+    const items = workItems.slice().sort((a,b) => a.date.localeCompare(b.date));
+
+    if(items.length === 0){
+      workList.innerHTML = `
+        <div class="empty-state">
+          <div class="big">Nichts eingetragen!</div>
+          <div>Noch keine Arbeiten oder Tests eingetragen.</div>
+        </div>`;
+      return;
+    }
+
+    const groups = { overdue: [], today: [], tomorrow: [], week: [], later: [] };
+    items.forEach(w => { groups[urgencyInfo(w.date).key].push(w); });
+
+    const groupTitles = {
+      overdue: 'Vorbei', today: 'Heute', tomorrow: 'Morgen',
+      week: 'Diese Woche', later: 'Später'
+    };
+
+    let html = '';
+    ['overdue','today','tomorrow','week','later'].forEach(key => {
+      if(groups[key].length === 0) return;
+      html += `<div class="group">
+        <div class="group-title">${groupTitles[key]} <span class="count">${groups[key].length}</span></div>
+        ${groups[key].map(renderWorkItem).join('')}
+      </div>`;
+    });
+
+    workList.innerHTML = html;
+    workList.querySelectorAll('[data-work-del]').forEach(el => {
+      el.addEventListener('click', () => {
+        deleteWorkItem(el.getAttribute('data-work-del'));
+        renderWorkList();
+        renderWorkCalendar();
+        renderHome();
+      });
+    });
+  }
+
+  // ---------- Arbeitsplan: Übersichtskalender ----------
+  function renderWorkCalendar(){
+    if(!wcGrid) return;
+    wcMonthLabel.textContent = MONTH_LABELS[wcViewMonth] + ' ' + wcViewYear;
+
+    const firstOfMonth = new Date(wcViewYear, wcViewMonth, 1);
+    let startOffset = firstOfMonth.getDay() - 1;
+    if(startOffset < 0) startOffset = 6;
+    const daysInMonth = new Date(wcViewYear, wcViewMonth + 1, 0).getDate();
+    const todayIso = todayISO();
+
+    let html = '';
+    for(let i = 0; i < startOffset; i++){
+      html += `<div class="cal-day cal-empty"></div>`;
+    }
+    for(let day = 1; day <= daysInMonth; day++){
+      const iso = localDateToIso(new Date(wcViewYear, wcViewMonth, day));
+      const dayItems = workItems.filter(w => w.date === iso);
+      const isToday = iso === todayIso;
+      const titleAttr = dayItems.length
+        ? dayItems.map(w => (w.type === 'test' ? 'Test' : 'Arbeit') + ' ' + w.subject).join(', ')
+        : '';
+      let dots = '';
+      dayItems.slice(0, 4).forEach(w => {
+        dots += `<span class="cal-dot" style="background:${getColorForSubject(w.subject)};"></span>`;
+      });
+      html += `<div class="cal-day ${isToday ? 'cal-today' : ''}" ${titleAttr ? `title="${escapeHtml(titleAttr)}"` : ''}>
+        <span class="cal-day-number">${day}</span>
+        <span class="cal-dots">${dots}</span>
+      </div>`;
+    }
+    wcGrid.innerHTML = html;
+  }
+
+  // ---------- Arbeitsplan: eigener Datepicker fürs Formular ----------
+  function setWorkDate(iso){
+    workDateInput.value = iso;
+    workDatePickerTrigger.textContent = formatDisplayDate(iso);
+  }
+
+  function renderWorkDatePickerGrid(){
+    wdpMonthLabel.textContent = MONTH_LABELS[wdpViewMonth] + ' ' + wdpViewYear;
+    const firstOfMonth = new Date(wdpViewYear, wdpViewMonth, 1);
+    let startOffset = firstOfMonth.getDay() - 1;
+    if(startOffset < 0) startOffset = 6;
+    const daysInMonth = new Date(wdpViewYear, wdpViewMonth + 1, 0).getDate();
+    const todayIso = todayISO();
+    const selectedIso = workDateInput.value || '';
+
+    let html = '';
+    for(let i = 0; i < startOffset; i++){
+      html += `<span class="dp-day dp-empty"></span>`;
+    }
+    for(let day = 1; day <= daysInMonth; day++){
+      const iso = localDateToIso(new Date(wdpViewYear, wdpViewMonth, day));
+      const classes = ['dp-day'];
+      if(iso === todayIso) classes.push('dp-today');
+      if(iso === selectedIso) classes.push('dp-selected');
+      html += `<button type="button" class="${classes.join(' ')}" data-iso="${iso}">${day}</button>`;
+    }
+    wdpGrid.innerHTML = html;
+
+    wdpGrid.querySelectorAll('.dp-day:not(.dp-empty)').forEach(btn => {
+      btn.addEventListener('click', () => {
+        setWorkDate(btn.getAttribute('data-iso'));
+        closeWorkDatePicker();
+      });
+    });
+  }
+
+  function openWorkDatePicker(){
+    const base = workDateInput.value ? isoToLocalDate(workDateInput.value) : new Date();
+    wdpViewYear = base.getFullYear();
+    wdpViewMonth = base.getMonth();
+    renderWorkDatePickerGrid();
+    workDatePickerPopup.hidden = false;
+  }
+
+  function closeWorkDatePicker(){
+    workDatePickerPopup.hidden = true;
+  }
+
   function renderHome(){
     if(!homeContent) return;
 
@@ -1626,6 +2095,36 @@ const db = firebase.firestore();
       listHtml = upcoming.map(h => renderItem(h)).join('');
     }
 
+    // --- anstehende Arbeiten & Tests ---
+    const todayIsoForWork = todayISO();
+    const upcomingWork = workItems
+      .filter(w => w.date >= todayIsoForWork)
+      .sort((a,b) => a.date.localeCompare(b.date))
+      .slice(0, 5);
+
+    const workCounts = { today:0, tomorrow:0, week:0 };
+    workItems.filter(w => w.date >= todayIsoForWork).forEach(w => {
+      const k = urgencyInfo(w.date).key;
+      if(workCounts[k] !== undefined) workCounts[k]++;
+    });
+
+    let workBadgesHtml = '<div class="home-badges">';
+    if(workCounts.today) workBadgesHtml += `<span class="home-badge today">${workCounts.today} heute</span>`;
+    if(workCounts.tomorrow) workBadgesHtml += `<span class="home-badge tomorrow">${workCounts.tomorrow} morgen</span>`;
+    if(workCounts.week) workBadgesHtml += `<span class="home-badge overdue">${workCounts.week} diese Woche</span>`;
+    if(!workCounts.today && !workCounts.tomorrow && !workCounts.week) workBadgesHtml += `<span class="home-badge ok">Nichts diese Woche</span>`;
+    workBadgesHtml += '</div>';
+
+    let workListHtml;
+    if(upcomingWork.length === 0){
+      workListHtml = `<div class="empty-state" style="padding:24px 12px;">
+        <div class="big">Nichts anstehend!</div>
+        <div>Keine bevorstehenden Arbeiten oder Tests.</div>
+      </div>`;
+    } else {
+      workListHtml = upcomingWork.map(renderWorkItem).join('');
+    }
+
     homeContent.innerHTML = `
       <div class="home-section">
         <div class="group-title">Aktuelle Stunde</div>
@@ -1636,6 +2135,11 @@ const db = firebase.firestore();
         ${badgesHtml}
         ${listHtml}
       </div>
+      <div class="home-section">
+        <div class="group-title">Anstehende Arbeiten &amp; Tests</div>
+        ${workBadgesHtml}
+        ${workListHtml}
+      </div>
     `;
 
     homeContent.querySelectorAll('[data-check]').forEach(el => {
@@ -1643,6 +2147,14 @@ const db = firebase.firestore();
     });
     homeContent.querySelectorAll('[data-del]').forEach(el => {
       el.addEventListener('click', () => deleteHomework(el.getAttribute('data-del')));
+    });
+    homeContent.querySelectorAll('[data-work-del]').forEach(el => {
+      el.addEventListener('click', () => {
+        deleteWorkItem(el.getAttribute('data-work-del'));
+        renderHome();
+        renderWorkList();
+        renderWorkCalendar();
+      });
     });
   }
 
@@ -1763,6 +2275,7 @@ const db = firebase.firestore();
       viewHome.hidden = view !== 'home';
       viewHomework.hidden = view !== 'homework';
       viewSchedule.hidden = view !== 'schedule';
+      viewWorkplan.hidden = view !== 'workplan';
     });
   });
 
@@ -1889,12 +2402,17 @@ const db = firebase.firestore();
       mainScreen.hidden = false;
 
       setDueDate(todayISO());
+      setWorkDate(todayISO());
+      const now = new Date();
+      wcViewYear = now.getFullYear();
+      wcViewMonth = now.getMonth();
 
       await loadUserData();
     } else {
       currentUid = null;
       homework = [];
       schedule = null;
+      workItems = [];
       mainScreen.hidden = true;
       loginScreen.hidden = false;
       loginEmail.value = '';
@@ -1907,6 +2425,7 @@ const db = firebase.firestore();
       viewHome.hidden = false;
       viewHomework.hidden = true;
       viewSchedule.hidden = true;
+      viewWorkplan.hidden = true;
     }
   });
 
