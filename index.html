@@ -392,6 +392,41 @@
     color:var(--paper);
   }
 
+  .checkbox-label{
+    display:flex;
+    align-items:center;
+    gap:9px;
+    font-family:'Work Sans', sans-serif;
+    font-size:14px;
+    color:var(--ink-light);
+    cursor:pointer;
+    user-select:none;
+  }
+
+  .checkbox-label input[type="checkbox"]{
+    width:17px;
+    height:17px;
+    accent-color:var(--margin-red);
+    cursor:pointer;
+    flex:0 0 auto;
+  }
+
+  .checkbox-label span{
+    line-height:1.3;
+  }
+
+  #next-lesson-subject-label{
+    font-weight:600;
+    color:var(--ink);
+  }
+
+  .next-lesson-hint{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12px;
+    color:var(--ink-light);
+    margin:6px 0 0 26px;
+  }
+
   .add-card .submit-row{
     display:flex;
     justify-content:flex-end;
@@ -984,6 +1019,15 @@
           </div>
           <div class="form-row">
             <div class="form-field">
+              <label class="checkbox-label" for="next-lesson-checkbox">
+                <input type="checkbox" id="next-lesson-checkbox" />
+                <span>Fällig zur nächsten <span id="next-lesson-subject-label">Deutsch</span>-Stunde (aus dem Stundenplan)</span>
+              </label>
+              <p id="next-lesson-hint" class="next-lesson-hint" hidden></p>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-field">
               <label for="task-input">Aufgabe</label>
               <textarea id="task-input" placeholder="z. B. S. 42, Nr. 3–5 rechnen" required></textarea>
             </div>
@@ -1024,7 +1068,32 @@
       <form id="cell-form">
         <div class="form-field" style="margin-bottom:12px;">
           <label for="cell-subject">Fach</label>
-          <input id="cell-subject" type="text" placeholder="z. B. Mathe" required />
+          <select id="cell-subject" required>
+            <option value="">Fach wählen …</option>
+            <option>Deutsch</option>
+            <option>Mathe</option>
+            <option>Englisch</option>
+            <option>Französisch</option>
+            <option>Spanisch</option>
+            <option>Latein</option>
+            <option>Biologie</option>
+            <option>Chemie</option>
+            <option>Physik</option>
+            <option>Geschichte</option>
+            <option>Erdkunde</option>
+            <option>Politik/SoWi</option>
+            <option>Religion/Ethik</option>
+            <option>Sport</option>
+            <option>Kunst</option>
+            <option>Musik</option>
+            <option>Informatik</option>
+            <option>Mittagspause</option>
+            <option value="__custom">Sonstiges …</option>
+          </select>
+        </div>
+        <div class="form-field" id="cell-custom-subject-field" style="display:none; margin-bottom:12px;">
+          <label for="cell-custom-subject-input">Eigenes Fach</label>
+          <input id="cell-custom-subject-input" type="text" placeholder="Fachname" />
         </div>
         <div class="form-field" style="margin-bottom:12px;">
           <label for="cell-color">Farbe für dieses Fach</label>
@@ -1083,7 +1152,7 @@ const db = firebase.firestore();
     'französisch':'#B0559A', 'spanisch':'#D97706', 'latein':'#8A7B6C', 'biologie':'#5FA052',
     'chemie':'#D9A63E', 'physik':'#7D6FE0', 'geschichte':'#A9762E', 'erdkunde':'#3E9BA8',
     'politik/sowi':'#6B7280', 'religion/ethik':'#9A7BB0', 'sport':'#E0665A', 'kunst':'#D97BB0',
-    'musik':'#3EA8A0', 'informatik':'#5B6B82'
+    'musik':'#3EA8A0', 'informatik':'#5B6B82', 'mittagspause':'#8A9A5B'
   };
 
   const loginScreen = document.getElementById('login-screen');
@@ -1101,6 +1170,9 @@ const db = firebase.firestore();
   const syncStatus = document.getElementById('sync-status');
 
   const hwForm = document.getElementById('hw-form');
+  const nextLessonCheckbox = document.getElementById('next-lesson-checkbox');
+  const nextLessonSubjectLabel = document.getElementById('next-lesson-subject-label');
+  const nextLessonHint = document.getElementById('next-lesson-hint');
   const subjectSelect = document.getElementById('subject-select');
   const customSubjectField = document.getElementById('custom-subject-field');
   const customSubjectInput = document.getElementById('custom-subject-input');
@@ -1118,9 +1190,12 @@ const db = firebase.firestore();
   const cellModal = document.getElementById('cell-modal');
   const cellForm = document.getElementById('cell-form');
   const cellSubject = document.getElementById('cell-subject');
+  const cellCustomSubjectField = document.getElementById('cell-custom-subject-field');
+  const cellCustomSubjectInput = document.getElementById('cell-custom-subject-input');
   const cellColor = document.getElementById('cell-color');
   const cellRoom = document.getElementById('cell-room');
   const cellTeacher = document.getElementById('cell-teacher');
+  const SUBJECT_LIST = ['Deutsch','Mathe','Englisch','Französisch','Spanisch','Latein','Biologie','Chemie','Physik','Geschichte','Erdkunde','Politik/SoWi','Religion/Ethik','Sport','Kunst','Musik','Informatik','Mittagspause'];
   const cellDelete = document.getElementById('cell-delete');
   const cellCancel = document.getElementById('cell-cancel');
   const modalTitle = document.getElementById('modal-title');
@@ -1297,6 +1372,63 @@ const db = firebase.firestore();
   document.addEventListener('click', (e) => {
     if(!datePicker.contains(e.target)) closeDatePicker();
   });
+
+  // ---------- Nächste Fach-Stunde finden (für die Checkbox) ----------
+  function findNextLessonDate(subjectName){
+    if(!schedule || !subjectName) return null;
+    const target = subjectName.trim().toLowerCase();
+    if(!target) return null;
+    const dayMap = { 1:'Mo', 2:'Di', 3:'Mi', 4:'Do', 5:'Fr' };
+
+    for(let offset = 0; offset < 15; offset++){
+      const d = new Date();
+      d.setHours(0,0,0,0);
+      d.setDate(d.getDate() + offset);
+      const dayCode = dayMap[d.getDay()];
+      if(!dayCode) continue; // Wochenende überspringen
+
+      for(let slot = 0; slot < schedule.times.length; slot++){
+        const entry = schedule.entries[dayCode + '-' + slot];
+        if(!entry || entry.subject.trim().toLowerCase() !== target) continue;
+
+        if(offset === 0){
+          const range = parseTimeRange(schedule.times[slot]);
+          if(range && nowMinutes() >= range.end) continue; // heute schon vorbei
+        }
+        return localDateToIso(d);
+      }
+    }
+    return null;
+  }
+
+  function currentSelectedSubjectName(){
+    return subjectSelect.value === '__custom'
+      ? customSubjectInput.value.trim()
+      : subjectSelect.value;
+  }
+
+  function updateNextLessonUI(){
+    const subjectName = currentSelectedSubjectName();
+    nextLessonSubjectLabel.textContent = subjectName || 'Fach';
+
+    if(!nextLessonCheckbox.checked) {
+      nextLessonHint.hidden = true;
+      return;
+    }
+    if(!subjectName){
+      nextLessonHint.hidden = false;
+      nextLessonHint.textContent = 'Bitte zuerst ein Fach auswählen.';
+      return;
+    }
+    const iso = findNextLessonDate(subjectName);
+    nextLessonHint.hidden = false;
+    if(iso){
+      setDueDate(iso);
+      nextLessonHint.textContent = 'Nächste ' + subjectName + '-Stunde: ' + formatDisplayDate(iso);
+    } else {
+      nextLessonHint.textContent = 'Keine ' + subjectName + '-Stunde im Stundenplan gefunden — Datum bitte selbst wählen.';
+    }
+  }
 
   // ---------- Storage (Firestore — geräteübergreifend über den Login) ----------
   async function loadUserData(){
@@ -1594,7 +1726,21 @@ const db = firebase.firestore();
     const key = day + '-' + slot;
     const entry = schedule.entries[key];
     modalTitle.textContent = DAY_LABELS[day] + ', ' + (slot+1) + '. Stunde';
-    cellSubject.value = entry ? entry.subject : '';
+
+    if(entry && SUBJECT_LIST.includes(entry.subject)){
+      cellSubject.value = entry.subject;
+      cellCustomSubjectField.style.display = 'none';
+      cellCustomSubjectInput.value = '';
+    } else if(entry){
+      cellSubject.value = '__custom';
+      cellCustomSubjectField.style.display = 'flex';
+      cellCustomSubjectInput.value = entry.subject;
+    } else {
+      cellSubject.value = '';
+      cellCustomSubjectField.style.display = 'none';
+      cellCustomSubjectInput.value = '';
+    }
+
     cellColor.value = entry ? getColorForSubject(entry.subject) : '#8899AC';
     cellRoom.value = entry ? (entry.room || '') : '';
     cellTeacher.value = entry ? (entry.teacher || '') : '';
@@ -1620,16 +1766,25 @@ const db = firebase.firestore();
     });
   });
 
-  cellSubject.addEventListener('input', () => {
-    if(cellSubject.value.trim()){
+  cellSubject.addEventListener('change', () => {
+    cellCustomSubjectField.style.display = cellSubject.value === '__custom' ? 'flex' : 'none';
+    if(cellSubject.value && cellSubject.value !== '__custom'){
       cellColor.value = getColorForSubject(cellSubject.value);
+    }
+  });
+
+  cellCustomSubjectInput.addEventListener('input', () => {
+    if(cellCustomSubjectInput.value.trim()){
+      cellColor.value = getColorForSubject(cellCustomSubjectInput.value);
     }
   });
 
   cellForm.addEventListener('submit', (e) => {
     e.preventDefault();
     if(!editingCell) return;
-    const subject = cellSubject.value.trim();
+    const subject = cellSubject.value === '__custom'
+      ? cellCustomSubjectInput.value.trim()
+      : cellSubject.value;
     if(!subject) return;
     const key = editingCell.day + '-' + editingCell.slot;
     schedule.entries[key] = {
@@ -1659,7 +1814,11 @@ const db = firebase.firestore();
 
   subjectSelect.addEventListener('change', () => {
     customSubjectField.style.display = subjectSelect.value === '__custom' ? 'flex' : 'none';
+    updateNextLessonUI();
   });
+
+  customSubjectInput.addEventListener('input', updateNextLessonUI);
+  nextLessonCheckbox.addEventListener('change', updateNextLessonUI);
 
   hwForm.addEventListener('submit', (e) => {
     e.preventDefault();
@@ -1678,6 +1837,8 @@ const db = firebase.firestore();
     customSubjectInput.value = '';
     subjectSelect.value = 'Deutsch';
     customSubjectField.style.display = 'none';
+    nextLessonCheckbox.checked = false;
+    nextLessonHint.hidden = true;
     setDueDate(todayISO());
     taskInput.focus();
   });
