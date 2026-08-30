@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Heftseite — Hausaufgaben-Planer</title>
+<link rel="icon" type="image/png" href="favicon.png">
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Caveat:wght@500;600;700&family=Work+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
 
@@ -755,10 +756,10 @@
     color:var(--ink-light);
   }
 
-  .home-badge.overdue{ color:#fff; background:var(--accent-overdue); border-color:var(--accent-overdue); }
-  .home-badge.today{ color:#fff; background:#B9862E; border-color:#B9862E; }
-  .home-badge.tomorrow{ color:var(--ink); background:var(--highlight); border-color:var(--highlight); }
-  .home-badge.ok{ color:var(--accent-green); border-color:var(--accent-green); }
+  .home-badge.overdue{ color:var(--accent-overdue); background:color-mix(in srgb, var(--accent-overdue) 12%, white); border-color:color-mix(in srgb, var(--accent-overdue) 35%, white); }
+  .home-badge.today{ color:#A9762E; background:color-mix(in srgb, #A9762E 12%, white); border-color:color-mix(in srgb, #A9762E 35%, white); }
+  .home-badge.tomorrow{ color:#8A6D1F; background:color-mix(in srgb, var(--highlight) 30%, white); border-color:color-mix(in srgb, var(--highlight) 60%, white); }
+  .home-badge.ok{ color:var(--accent-green); background:color-mix(in srgb, var(--accent-green) 10%, white); border-color:color-mix(in srgb, var(--accent-green) 30%, white); }
 
   /* ---------- Modal ---------- */
   .modal-overlay{
