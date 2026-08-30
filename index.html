@@ -959,15 +959,16 @@
   }
 
   .cal-day{
-    aspect-ratio:1;
+    min-height:62px;
     border:1px solid var(--border);
     border-radius:3px;
     padding:4px;
     display:flex;
     flex-direction:column;
-    align-items:center;
+    align-items:flex-start;
     justify-content:flex-start;
     gap:3px;
+    overflow:hidden;
   }
 
   .cal-day.cal-empty{
@@ -977,6 +978,7 @@
 
   .cal-day.cal-today{
     border-color:var(--margin-red);
+    border-width:2px;
   }
 
   .cal-day-number{
@@ -990,17 +992,31 @@
     font-weight:600;
   }
 
-  .cal-dots{
+  .cal-entries{
     display:flex;
-    flex-wrap:wrap;
+    flex-direction:column;
     gap:2px;
-    justify-content:center;
+    width:100%;
   }
 
-  .cal-dot{
-    width:7px;
-    height:7px;
-    border-radius:50%;
+  .cal-entry{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:9.5px;
+    font-weight:600;
+    text-transform:uppercase;
+    letter-spacing:0.02em;
+    padding:2px 4px;
+    border-radius:2px;
+    width:100%;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+
+  .cal-more{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:9px;
+    color:var(--ink-light);
   }
 
   /* ---------- Arbeitsplan: Einträge ---------- */
@@ -1975,13 +1991,32 @@ const db = firebase.firestore();
       const titleAttr = dayItems.length
         ? dayItems.map(w => (w.type === 'test' ? 'Test' : 'Arbeit') + ' ' + w.subject).join(', ')
         : '';
-      let dots = '';
-      dayItems.slice(0, 4).forEach(w => {
-        dots += `<span class="cal-dot" style="background:${getColorForSubject(w.subject)};"></span>`;
-      });
-      html += `<div class="cal-day ${isToday ? 'cal-today' : ''}" ${titleAttr ? `title="${escapeHtml(titleAttr)}"` : ''}>
+
+      let entriesHtml = '';
+      let cellStyle = '';
+      const shown = dayItems.slice(0, 2);
+      const extra = dayItems.length - shown.length;
+
+      if(shown.length === 1){
+        // Genau ein Eintrag: die ganze Box in der Fach-Farbe einfärben
+        const color = getColorForSubject(shown[0].subject);
+        cellStyle = `background:color-mix(in srgb, ${color} 16%, white); border-color:${color};`;
+        entriesHtml = `<div class="cal-entries">
+          <span class="cal-entry" style="background:transparent; color:${color}; padding-left:0;">${escapeHtml(shown[0].subject)}</span>
+        </div>`;
+      } else if(shown.length > 1){
+        entriesHtml = `<div class="cal-entries">
+          ${shown.map(w => {
+            const color = getColorForSubject(w.subject);
+            return `<span class="cal-entry" style="background:color-mix(in srgb, ${color} 20%, white); color:${color};">${escapeHtml(w.subject)}</span>`;
+          }).join('')}
+          ${extra > 0 ? `<span class="cal-more">+${extra} weitere</span>` : ''}
+        </div>`;
+      }
+
+      html += `<div class="cal-day ${isToday ? 'cal-today' : ''}" style="${cellStyle}" ${titleAttr ? `title="${escapeHtml(titleAttr)}"` : ''}>
         <span class="cal-day-number">${day}</span>
-        <span class="cal-dots">${dots}</span>
+        ${entriesHtml}
       </div>`;
     }
     wcGrid.innerHTML = html;
